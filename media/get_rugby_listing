@@ -1,0 +1,2 @@
+#!/bin/bash
+get_iplayer --nopurge --category=rugby --type=radio,tv

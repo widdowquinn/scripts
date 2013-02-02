@@ -1,0 +1,2 @@
+#!/bin/bash
+get_iplayer --nopurge --category=science,scifi,comedy,film,Factual --exclude-channel=cbbc,cbeebies --exclude-category="children's"

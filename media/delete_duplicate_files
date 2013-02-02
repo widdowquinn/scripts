@@ -1,0 +1,179 @@
+#!/usr/bin/env python
+#
+#  delete_duplicate_files.py
+#  
+#
+#  Created by Leighton Pritchard on 25/11/2008.
+#  Copyright (c) 2008 Scottish Crop Research Institute. All rights reserved.
+#
+
+###########
+# IMPORTS
+from optparse import OptionParser
+import hashlib
+import os
+import shutil
+import sys
+
+
+##########
+# FUNCTIONS
+
+# main()
+def main():
+    """ Main function for the script.  Describes script logic.
+    """
+    # Parse cmd-line arguments
+    (options, args) = parse_args()
+    # Get list of files to process
+    file_checklist = get_file_checklist(args, options.verbose)
+    # Find duplicate sets in the checklist
+    duplicate_sets = find_duplicate_files(file_checklist, options.verbose)
+    # If the cmd-line option to copy duplicate sets to new directories is 
+    # given, do so
+    if options.copy_duplicates:
+        copy_duplicate_sets(duplicate_sets, options.copy_duplicates, options.verbose)
+    # Unless told not to delete duplicates, delete duplicates
+    if not options.no_delete:
+        delete_duplicates(duplicate_sets, options.verbose)
+
+
+# get_file_checklist
+def get_file_checklist(args, verbose):
+    """ Loop over args and, for each arg that's a filname, add it to 
+        the checklist; for each arg that's a dictionary, drill down 
+        and add all files below the root directory
+    """
+    checklist = []
+    if verbose >= 1:
+        print >> sys.stdout, "Compiling list of files to test..."
+    for arg in args:
+        if verbose >= 1:
+            print >> sys.stdout, "Checking argument: %s" % arg
+        if os.path.isfile(arg):  # File, so append to checklist
+            checklist.append(arg)
+        if os.path.isdir(arg):   # Dir, so drill down and add all files
+            flist = [f for f in os.walk(arg)]
+            for dirpath, discard, filenames in flist:
+                for filename in filenames:
+                    checklist.append(os.path.join(dirpath, filename))
+    if verbose >= 1:
+        print >> sys.stdout, "...testing %d files for duplicates" % len(checklist)
+    return checklist
+
+
+# find_duplicate_files()
+def find_duplicate_files(filelist, verbose):
+    """ When passed a list of files, returns a list of lists of files that
+        are duplicates, as determined by their having identical hashes.
+    """
+    # First compile the duplicates/singletons
+    hashdir = {}
+    count = 0
+    for filename in filelist:
+        m = hashlib.md5()
+        m.update(open(filename, 'rb').read())
+        hash = m.digest()
+        if hash not in hashdir:
+            hashdir[hash] = [filename]
+        else:
+            count += 1
+            hashdir[hash].append(filename)
+            if verbose >= 1:
+                print >> sys.stdout, "%s is a duplicate" % filename
+    if verbose >= 1:
+        print >> sys.stdout, "Found %d duplicates" % count
+    # Reduce to duplicate sets
+    duplicates = [v for v in hashdir.values() if len(v) > 1]
+    if verbose >= 1:
+        print >> sys.stdout, "Found %d duplicate sets" % len(duplicates)
+    return duplicates
+            
+
+# copy_duplicates()
+def copy_duplicate_sets(duplicates, destination, verbose):
+    """ Expects a list of lists of files, and loops over them, writing them to 
+        subdirectories of the passed destination
+    """
+    if verbose >= 1:
+        print >> sys.stdout, "Copying duplicate files to subdirectories in %s" % destination
+    # Does duplicate destination exist?  If not, create it
+    count = 0
+    if not os.path.isdir(destination):
+        print >> sys.stdout, "Creating directory for duplicates: %s" % destination
+        os.mkdir(destination)
+    # Test for presence of duplicate directories in destination
+    else:
+        if verbose >= 1:
+            print >> sys.stdout, "Finding existing duplicate directories"
+        dest_dirs = [d for d in os.listdir(destination) if os.path.isdir(os.path.join(destination, d))]
+        dupedirs = [d for d in dest_dirs if d.startswith('dupes_')]
+        if dupedirs:
+            vals = [int(d.split('_')[-1]) for d in dupedirs]
+            count = max(vals)
+            if verbose >= 1:
+                print >> sys.stdout, "%d duplicate directories found" % count
+        else:
+            count = 0
+    # Now copy duplicates
+    for dupe_set in duplicates:
+        # Create directory to hold files
+        count += 1
+        dirname = os.path.join(destination, "dupes_%d" % count)
+        if verbose >= 1:
+            if os.path.isdir(dirname):
+                print >> sys.stdout, "Copy destination: %s" % dirname
+            else:
+                print >> sys.stdout, "Creating copy destination: %s" % dirname
+                os.mkdir(dirname)
+        # Copy all duplicates to that directory
+        for dupe in dupe_set:
+            target = os.path.join(dirname, os.path.split(dupe)[-1])
+            if verbose >= 1:
+                if not os.path.isfile(target):
+                    print >> sys.stdout, "Copying %s to %s" % (dupe, dirname)
+                    shutil.copy(dupe, dirname)
+                else:
+                    print >> sys.stdout, "File %s exists; not copying to duplicate" % target
+        
+
+# delete_duplicates()
+def delete_duplicates(duplicates, verbose):
+    """ Delete all but the first file in each duplicate list
+    """
+    deletecount = 0
+    for dupeset in duplicates:
+        if verbose >= 1:
+            print >> sys.stdout, "Duplicate set contains %d files" % len(dupeset)
+            print >> sys.stdout, "Keeping %s" % dupeset[0]
+            for filename in dupeset[1:]:
+                print >> sys.stdout, "Deleting %s" % filename
+        for filename in dupeset[1:]:
+            os.remove(filename)
+            deletecount += 1
+    print >> sys.stdout, "Deleted %d duplicate files" % deletecount
+
+# parse_args()
+def parse_args():
+    """ Parses command-line arguments and returns OptionParser output
+    """
+    # Set up option parser
+    usage = "usage: %prog [options] arg1 arg2"
+    parser = OptionParser(usage=usage)
+    # Process arguments
+    parser.add_option("-c", "--copy_duplicates", help="Location to copy duplicate files in",
+                      action="store", dest="copy_duplicates", default=None,
+                      type="string")
+    parser.add_option("--no_delete", help="Do not delete duplicates",
+                      action="store_true", dest="no_delete", default=False)
+    parser.add_option("-v", "--verbose",
+                      help="Verbose output (default:%default)",
+                      action="store", dest="verbose", default=1, type="int")
+    return parser.parse_args()
+
+
+##########
+# SCRIPT
+
+if __name__ == "__main__":
+    main()

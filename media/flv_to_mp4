@@ -1,0 +1,88 @@
+#!/bin/bash
+#
+# flv_to_mp4
+#
+# Usage: flv_to_mp4 <directory>
+#
+# Use FFMpeg to convert a directory of .flv format movies to .mp4 format,
+# making no changes to the framerate/bitrate or any other part of the 
+# movie
+#
+# (C) L.Pritchard 2011
+
+# Escape if no args
+if 
+  [ $# -eq 0 ]
+then
+  echo "Please provide a root directory for the conversions"
+  echo "(exiting)"
+  exit
+fi
+
+# Start with empty list of directories, and populate
+dirlist=()
+
+# Add all command-line directories
+echo "Passed directories..."
+for d in "$@"
+do
+  echo $d
+  if
+    [ -d "$1" ]
+  then
+    dirlist=("${dirlist[@]}" "$d")
+  fi
+  # Add first level of subdirectories for each passed directory
+  for f in "${d%%/}"/*
+  do
+    if 
+      [ -d "$f" ]
+    then
+      dirlist=("${dirlist[@]}" "$f")
+    fi
+  done
+done
+
+# List directories that will be processed
+echo "The following directories will be processed:"
+for d in "${dirlist[@]}"
+do
+  echo $d
+done
+echo
+
+# Loop over directories and grab filenames
+for d in "${dirlist[@]}"
+do
+  echo "Processing $d"
+  echo "Found the following FLV files:"
+  filelist=()
+  for filename in "$d"/*.flv
+  do
+    if 
+      [ -f "$filename" ]
+    then
+      filelist=("${filelist[@]}" "$filename")
+    fi
+  done
+  for f in "${filelist[@]}"
+  do
+    echo $f
+  done
+  echo "Converting files..."
+  for f in "${filelist[@]}"
+  do
+    o=${f%%.mp4.flv}.mp4
+    echo "...converting..."
+    cmd="time ffmpeg -i \"${f}\" -vcodec copy -acodec copy -f mp4 -y \"${o}\""
+    echo $cmd
+    time ffmpeg -i "${f}" -vcodec copy -acodec copy -f mp4 -y "${o}"
+    echo "...deleting input FLV..."
+    cmd="rm \"${f}\""
+    echo $cmd
+    rm "${f}"
+  done
+  echo
+  echo
+done
+exit
