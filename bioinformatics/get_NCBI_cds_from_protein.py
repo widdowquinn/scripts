@@ -98,7 +98,7 @@ def parse_cmdline(args):
                       action="store_true", default=False,
                       help="Give verbose output")
     parser.add_option("-e", "--email", dest="email",
-                      action="store", default="leighton.pritchard@hutton.ac.uk",
+                      action="store", default=None,
                       help="Entrez email")
     parser.add_option("-c", "--cachestem", dest="cachestem",
                       action="store", default=time.strftime("%y%m%d%H%m%S"),
