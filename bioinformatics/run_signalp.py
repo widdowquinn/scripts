@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.6
+#!/usr/bin/env python
 #
 # run_signalp.py [euk|gram+|gram-] <FASTAfile> [-o|--outfilename <output file>]
 #

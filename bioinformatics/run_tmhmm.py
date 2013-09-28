@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.6
+#!/usr/bin/env python
 #
 # run_tmhmm.py <FASTAfile> [-o|--outfilename <output file>]
 #
