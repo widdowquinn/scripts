@@ -30,6 +30,8 @@
 # complete assembly available).
 #
 # ANIm: uses MUMmer (NUCmer) to align the input sequences.
+# ANIb: uses BLASTN to align 1000nt fragments of the input sequences
+# TETRA: calculates tetranucleotide frequencies of each input sequence
 #
 # This script takes as input a directory containing a set of 
 # correctly-formatted FASTA multiple sequence files. All sequences for a 
@@ -44,7 +46,15 @@
 #       alignment; tab-separated format plain text tables describing total
 #       alignment lengths, and total alignment percentage identity
 #
-# ANIb: BLAST 
+# ANIb: FASTA sequences describing 1000nt fragments of each input sequence; 
+#       BLAST nucleotide databases - one for each set of fragments; and BLASTN 
+#       output files (tab-separated tabular format plain text) - one for each 
+#       pairwise comparison of input sequences. There are potentially a lot of
+#       intermediate files.
+#
+# TETRA: 
+#
+# In addition, all methods produce a table 
 #
 # (c) L.Pritchard 2013
 
@@ -191,7 +201,7 @@ def calculate_anib():
 
         All FASTA format files (selected by suffix) in the input directory are
         used to construct BLAST databases, placed in the output directory.  
-        Each file's contents are also split into sequence fragments of lenght
+        Each file's contents are also split into sequence fragments of length
         options.fragsize, and the multiple FASTA file that results written to 
         the output directory. These are BLASTNed, pairwise, against the 
         databases.
@@ -204,8 +214,9 @@ def calculate_anib():
         qualifying matches contribute to the total aligned length, and total
         aligned sequence identity used to calculate ANI.
 
-        The results are processed to give matrices of aligned sequence length,
-        similarity error counts, ANIs, and minimum aligned percentage of 
+        The results are processed to give matrices of aligned sequence length
+        (aln_lengths.tab), similarity error counts (sim_errors.tab), ANIs
+        (perc_ids.tab), and minimum aligned percentage (perc_aln.tab) of 
         each genome, for each pairwise comparison. These are written to the 
         output directory in plain text tab-separated format.
     """
@@ -234,13 +245,26 @@ def calculate_anib():
 # as used by JSpecies, and described in Richter et al (2009) and Teeling et
 # al. (2004) and Teeling et al. (2004)
 def calculate_tetra():
-    """
+    """ Calculate tetranucleotide frequencies for each input sequence, and 
+        their Pearson correlation, as described in Teeling et al. (2004a)
+        Env. Micro. 6 938-947 doi:10.1111/j.1462-2920.2004.00624.x;
+        Teeling et al. (2004b) BMC Bioinf. 5 163 doi:10.1186/1471-2105-5-163;
+        and Richter & Rossello-Mora (2009) PNAS 106 19126-19131
+        doi:10.1073/pnas.0906412106.
+
+        FASTA format files (selected by suffix) in the input directory are used
+        to construct frequency tables of tetranucleotide occurrence. These 
+        frequencies are converted into Z-scores, and tabulated 
+        (rows=tetranucleotides, columns=input sequences, written as 
+        tetra_z_scores.tab). The Pearson correlation between Z-scores for 
+        input sequences is then used as a measure of sequence similarity and
+        written to tetra_corr.tab.
     """
     logger.info("Running TETRA method")
     tetra_z = calc_org_tetra()   # Calculate Z-scores for tetranucleotides
     write_tetraz('tetra_z_scores.tab', tetra_z)
     corr_z = calc_tetra_corr(tetra_z) # Calculate Pearson correlation
-    write_table('perc_ids.tab', tetra_z.keys(), corr_z, 
+    write_table('tetra_corr.tab', tetra_z.keys(), corr_z, 
                 "TETRA")
 
 
@@ -248,7 +272,9 @@ def calculate_tetra():
 # Write the set of tetranucleotide frequency Z scores to a plain text 
 # tab-separated table, in the output directory
 def write_tetraz(filename, tetra_z):
-    """
+    """ Writes the Z score for each tetranucleotide to a plain text 
+        tab-separated table with one row for each tetranucleotide, and one
+        column for each input sequence.
     """
     try:
         fh = open(os.path.join(options.outdirname, filename), 'w')
@@ -270,7 +296,13 @@ def write_tetraz(filename, tetra_z):
 # Calculate Pearson's correlation coefficient from the Z-scores for each
 # tetranucleotide. If we're forcing rpy2, might as well use that, though...
 def calc_tetra_corr(tetra_z):
-    """
+    """ Calculate Pearson correlation coefficient from Z scores for each
+        tetranucleotide. This is done longhand here, which is fast enough,
+        but for robustness we might want to just hand this over to R, 
+        as it is a dependency for this method anyway (TODO).
+
+        Note that we report a correlation by this method, rather than a 
+        percentage identity.
     """
     corrs = {}
     orgs = sorted(tetra_z.keys())
@@ -294,7 +326,11 @@ def calc_tetra_corr(tetra_z):
 
 # Calculate tetranucleotide values for each input sequence
 def calc_org_tetra():
-    """
+    """ We calculate the mono-, di-, tri- and tetranucleotide frequencies
+        for each sequence, on each strand, and follow Teeling et al. (2004)
+        in calculating a corresponding Z-score for each observed 
+        tetranucleotide frequency, dependent on the mono-, di- and tri-
+        nucleotide frequencies for that input sequence.
     """
     org_tetraz = {}
     for fn in get_fasta_files():
@@ -364,7 +400,9 @@ def calc_org_tetra():
 
 # Returns true if the passed string contains only A, C, G or T
 def tet_clean(s):
-    """
+    """ Checks that a passed string contains only unambiguous IUPAC nucleotide 
+        symbols. We are assuming that a low frequency of IUPAC ambiguity symbols
+        doesn't affect our calculation.
     """
     if not len(set(s) - set('ACGT')):
         return True
@@ -523,7 +561,9 @@ def process_delta(org_lengths):
 # Parse BLAST tabular output and store total alignment length, similarity
 # counts and percentage identity for each pairwise comparison
 def process_blast(org_lengths):
-    """
+    """ Read in the BLASTN comparison output files, and calculate alignment 
+        lengths, similarity errors, and percentage identity and alignment
+        coverage for each input sequence comparison.
     """
     infiles = get_input_files(options.outdirname, '.blast_tab')
     logger.info("BLAST files:\n\t%s" % '\n\t'.join(infiles))
@@ -571,7 +611,8 @@ def parse_delta(filename):
 
 # Parse custom BLASTN output to get total alignment length and mismatches 
 def parse_blast(filename):
-    """
+    """ Calculate the alignment length and total number of similarity errors
+        for the passed BLASTN alignment file.
     """
     aln_length, sim_errors = 0, 0,
     qname, sname = \
@@ -601,7 +642,16 @@ def parse_blast(filename):
 
 # Run BLASTN pairwise on input files, using multiprocessing
 def pairwise_blast(filenames):
-    """
+    """ Run BLASTN for each pairwise comparison of input sequences, using 
+        multiprocessing to take advantage of multiple cores where possible, and
+        writing results to the nominated output directory.
+
+        - filenames is an iterable of locations of input FASTA files, from
+              which BLASTN command lines are constructed.
+
+        We loop over all FASTA files in the input directory, generating
+        BLASTN command line for each pairwise comparison, and then pass those
+        command lines to be run using multiprocessing.
     """
     logger.info("Running pairwise BLASTN to generate *.blast_tab")
     cmdlines = []
@@ -691,7 +741,10 @@ def make_nucmer_cmd(f1, f2):
 
 # Construct a command-line for BLASTN
 def make_blast_cmd(f1, f2):
-    """
+    """ Construct a BLASTN command line to conduct sequence comparison between
+        two input sequences, for ANIb.
+
+        - f1, f2 are the locations of two input FASTA files for analysis
     """
     prefix = os.path.join(options.outdirname, "%s_vs_%s" % \
                               (os.path.splitext(os.path.split(f1)[-1])[0],
@@ -708,7 +761,10 @@ def make_blast_cmd(f1, f2):
 
 # Construct a command line for BLAST makeblastdb
 def make_makeblastdb_cmd(filename):
-    """
+    """ Construct a makeblastdb command line to make a BLAST nucleotide database
+        from the passed input FASTA file.
+
+        - filename is the location input FASTA sequence file for the database
     """
     db_prefix = os.path.join(options.outdirname, 
                              os.path.split(os.path.splitext(filename)[0])[-1])
