@@ -44,6 +44,7 @@
 #       alignment; tab-separated format plain text tables describing total
 #       alignment lengths, and total alignment percentage identity
 #
+# ANIb: BLAST 
 #
 # (c) L.Pritchard 2013
 
@@ -118,7 +119,7 @@ def parse_cmdline(args):
                       help="Generate heatmap of ANI")
     parser.add_option("-m", "--method", dest="method",
                       action="store", default="ANIm",
-                      help="ANI method")
+                      help="ANI method [ANIm|ANIb|TETRA]")
     parser.add_option("--nucmer_exe", dest="nucmer_exe",
                       action="store", default="nucmer",
                       help="Path to NUCmer executable")    
