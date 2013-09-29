@@ -80,7 +80,37 @@
 #       (http://cran.r-project.org/)
 #
 # o Rpy2 (http://rpy.sourceforge.net/rpy2.html)
+#
+#
+# USAGE
+# =====
+#
+# calculate_ani.py [options]
 # 
+# Options:
+#   -h, --help            show this help message and exit
+#   -o OUTDIRNAME, --outdir=OUTDIRNAME
+#                         Output directory
+#   -i INDIRNAME, --indir=INDIRNAME
+#                         Input directory name
+#   -v, --verbose         Give verbose output
+#   -f, --force           Force file overwriting
+#   -s, --fragsize        Sequence fragment size for ANIb
+#   --skip_nucmer         Skip NUCmer runs, for testing (e.g. if output already
+#                         present)
+#   --skip_blast          Skip BLAST runs, for testing (e.g. if output already
+#                         present)
+#   --noclobber           Don't nuke existing files
+#   -g, --graphics        Generate heatmap of ANI
+#   -m METHOD, --method=METHOD
+#                         ANI method
+#   --nucmer_exe=NUCMER_EXE
+#                         Path to NUCmer executable
+#   --blast_exe=BLAST_EXE
+#                         Path to BLASTN+ executable
+#   --makeblastdb_exe=MAKEBLASTDB_EXE
+#                         Path to BLAST+ makeblastdb executable
+#
 # (c) L.Pritchard 2013
 
 #=============
