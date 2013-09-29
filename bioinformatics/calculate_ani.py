@@ -50,13 +50,6 @@
 #=============
 # IMPORTS
 
-try:
-    import rpy2.robjects as robjects
-    rpy2_import = True
-except ImportError:
-    logger.warning("Could not import rpy2: graphical output " +\
-                       "and TETRA method not available")
-    rpy2_import = False
 
 import collections
 import logging
@@ -73,11 +66,17 @@ import traceback
 try:
     from Bio import SeqIO
 except ImportError:
-    logger.error("Biopython required for script, but not found (exiting)")
+    print "Biopython required for script, but not found (exiting)"
     sys.exit(1)
 from optparse import OptionParser
 
-
+try:
+    import rpy2.robjects as robjects
+    rpy2_import = True
+except ImportError:
+    print "Could not import rpy2: graphical output " +\
+                       "and TETRA method not available"
+    rpy2_import = False
 
 #=============
 # FUNCTIONS
