@@ -168,6 +168,9 @@ def parse_cmdline(args):
     parser.add_option("-s", "--fragsize", dest="fragsize",
                       action="store_const", default=1020,
                       help="Sequence fragment size for ANIb")
+    parser.add_option("-l", "--logfile", dest="logfile",
+                      action="store", default=None,
+                      help="Logfile location")
     parser.add_option("--skip_nucmer", dest="skip_nucmer",
                       action="store_true", default=False,
                       help="Skip NUCmer runs, for testing " +\
@@ -232,10 +235,6 @@ def calculate_anim():
     org_lengths = get_org_lengths()
     pairwise_nucmer(infiles)
     lengths, sim_errors, perc_ids, perc_aln = process_delta(org_lengths)
-    print lengths
-    print sim_errors
-    print perc_ids
-    print perc_aln
     # Sanity check print for organisms of same species
     #for k, v in sorted(perc_ids.items()):
     #    if v > 0.95:
@@ -389,7 +388,6 @@ def calc_tetra_corr(tetra_z):
             z1diffs2 = sum([z * z for z in z1diffs])
             z2diffs2 = sum([z * z for z in z2diffs])
             corrs[(o1, o2)] = diffprods/math.sqrt(z1diffs2 * z2diffs2)
-    print corrs
     return corrs
 
 # Calculate tetranucleotide values for each input sequence
@@ -922,7 +920,14 @@ if __name__ == '__main__':
     # verbosity or not
     logger = logging.getLogger('calculate_ani.py')
     logger.setLevel(logging.DEBUG)
-    err_handler = logging.StreamHandler(sys.stderr)
+    if options.logfile is None:
+        err_handler = logging.StreamHandler(sys.stderr)
+    else:
+        try:
+            logstream = open(options.logfile, 'w')
+            err_handler = logging.StreamHandler(logstream)
+        except:
+            err_handler = logging.StreamHandler(sys.stderr)
     err_formatter = \
                   logging.Formatter('%(levelname)s: %(message)s')
     err_handler.setFormatter(err_formatter)
