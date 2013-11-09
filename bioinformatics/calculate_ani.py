@@ -497,7 +497,7 @@ def fragment_input_files():
                 newseq = s[i:i+options.fragsize]
                 newseq.id = "frag%05d" % count
                 outseqs.append(newseq)
-                i += fragsize
+                i += options.fragsize
         SeqIO.write(outseqs, ofn, 'fasta')
 
 # Make BLAST databases for each of the fragmented input files
