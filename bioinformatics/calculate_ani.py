@@ -232,6 +232,10 @@ def calculate_anim():
     org_lengths = get_org_lengths()
     pairwise_nucmer(infiles)
     lengths, sim_errors, perc_ids, perc_aln = process_delta(org_lengths)
+    print lengths
+    print sim_errors
+    print perc_ids
+    print perc_aln
     # Sanity check print for organisms of same species
     #for k, v in sorted(perc_ids.items()):
     #    if v > 0.95:
@@ -962,12 +966,16 @@ if __name__ == '__main__':
     # scores from the perc_id.tab output
     if options.graphics:
         logger.info("Rendering heatmap with R")
+        if options.method == "TETRA":
+            filename = "tetra_corr.tab"
+        else:
+            filename = "perc_ids.tab"
         if not rpy2_import:
             logger.error("No rpy2 module: graphics are unavailable")
         else:
             rstr = ["library(gplots)",
                     "ani <- read.table('%s', " % \
-                        os.path.join(options.outdirname, 'perc_ids.tab') + \
+                        os.path.join(options.outdirname, filename) + \
                         "header=T, sep='\\t', " +\
                         "row.names=1)",
                     "ani[] <- lapply(ani, function(x){replace(x, x == 0, NA)})",
@@ -975,10 +983,11 @@ if __name__ == '__main__':
                         os.path.join(options.outdirname, '%s.pdf' % \
                                          options.method),
                     "heatmap.2(as.matrix(ani), col=bluered, " +\
-                        "breaks=seq(0.9,1,0.001), margins=c(15,12), " +\
-                        "cexCol=1/log10(ncol(ani)), " +\
-                        "cexRow=1/log10(nrow(ani)), main='%s')" % \
-                        options.method,
+                     "breaks=seq(min(0.9, min(ani[!is.na(ani)])),1,0.001), " +\
+                     "margins=c(15,12), " +\
+                     "cexCol=1/log10(ncol(ani)), " +\
+                     "cexRow=1/log10(nrow(ani)), main='%s')" % \
+                      options.method,
                     "dev.off()"]
             rstr = '\n'.join(rstr)
             logger.info("R command:\n%s" % rstr)
