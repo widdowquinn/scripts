@@ -185,6 +185,9 @@ def parse_cmdline(args):
     parser.add_option("-g", "--graphics", dest="graphics",
                       action="store_true", default=False,
                       help="Generate heatmap of ANI")
+    parser.add_option("--format", dest="gformat",
+                      action="store", default="pdf",
+                      help="Graphics output format [pdf|png|jpg]")
     parser.add_option("-m", "--method", dest="method",
                       action="store", default="ANIm",
                       help="ANI method [ANIm|ANIb|TETRA]")
@@ -975,6 +978,8 @@ if __name__ == '__main__':
             filename = "tetra_corr.tab"
         else:
             filename = "perc_ids.tab"
+        if options.gformat.lower() not in ('pdf', 'png', 'jpg'):
+            options.gformat = 'pdf'
         if not rpy2_import:
             logger.error("No rpy2 module: graphics are unavailable")
         else:
@@ -984,9 +989,10 @@ if __name__ == '__main__':
                         "header=T, sep='\\t', " +\
                         "row.names=1)",
                     "ani[] <- lapply(ani, function(x){replace(x, x == 0, NA)})",
-                    "pdf('%s')" % \
-                        os.path.join(options.outdirname, '%s.pdf' % \
-                                         options.method),
+                    "%s('%s')" % \
+                       (options.gformat.lower(),
+                        os.path.join(options.outdirname, '%s.%s' % \
+                                 (options.method, options.gformat.lower() ))),
                     "heatmap.2(as.matrix(ani), col=bluered, " +\
                      "breaks=seq(min(0.9, min(ani[!is.na(ani)])),1,0.001), " +\
                      "margins=c(15,12), " +\
