@@ -939,6 +939,8 @@ if __name__ == '__main__':
     else:
         err_handler.setLevel(logging.WARNING)
     logger.addHandler(err_handler)
+    logger.info('# calculate_ani.py logfile')
+    logger.info('# Run: %s' % time.asctime())
  
     # Report arguments, if verbose
     logger.info(options)
