@@ -15,7 +15,8 @@
 #  assemblies. This script will produce a new directory of the same data where
 #  the contig lengths are restricted to being greater than a specified length.
 #
-# Copyright (C) 2013 Leighton Pritchard
+# Copyright (C) 2013 The James Hutton Institute
+# Author: Leighton Pritchard
 #
 # Contact:
 # leighton.pritchard@hutton.ac.uk
