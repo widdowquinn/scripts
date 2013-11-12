@@ -996,7 +996,7 @@ if __name__ == '__main__':
                         os.path.join(options.outdirname, '%s.%s' % \
                                  (options.method, options.gformat.lower() ))),
                     "heatmap.2(as.matrix(ani), col=bluered, " +\
-                     "breaks=seq(min(0.9, min(ani[!is.na(ani)])),1,0.001), " +\
+                     "breaks=seq(min(0.9, max(ani[!is.na(ani)]))-0.01,1,0.001), " +\
                      "margins=c(15,12), " +\
                      "cexCol=1/log10(ncol(ani)), " +\
                      "cexRow=1/log10(nrow(ani)), main='%s')" % \
