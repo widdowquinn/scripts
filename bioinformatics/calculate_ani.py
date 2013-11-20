@@ -948,19 +948,25 @@ if __name__ == '__main__':
 
     # We set up logging, and modify loglevel according to whether we need
     # verbosity or not
+    # err_handler points to sys.stderr
+    # err_handler_file points to a logfile, if named
     logger = logging.getLogger('calculate_ani.py')
     logger.setLevel(logging.DEBUG)
-    if options.logfile is None:
-        err_handler = logging.StreamHandler(sys.stderr)
-    else:
-        try:
-            logstream = open(options.logfile, 'w')
-            err_handler = logging.StreamHandler(logstream)
-        except:
-            err_handler = logging.StreamHandler(sys.stderr)
+    err_handler = logging.StreamHandler(sys.stderr)
     err_formatter = \
                   logging.Formatter('%(levelname)s: %(message)s')
     err_handler.setFormatter(err_formatter)
+    if options.logfile is not None:
+        try:
+            logstream = open(options.logfile, 'w')
+            err_handler_file = logging.StreamHandler(logstream)
+            err_handler_file.setFormatter(err_formatter)
+            err_handler_file.setLevel(logging.INFO)
+            logger.addHandler(err_handler_file)
+        except:
+            logger.error("Could not open %s for logging" %
+                         options.logfile)
+            sys.exit(1)
     if options.verbose:
         err_handler.setLevel(logging.INFO)
     else:
