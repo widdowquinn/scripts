@@ -104,6 +104,8 @@
 #   -g, --graphics        Generate heatmap of ANI
 #   -m METHOD, --method=METHOD
 #                         ANI method
+#   --maxmatch            Override MUMmer settings and allow all matches in 
+#                         NUCmer
 #   --nucmer_exe=NUCMER_EXE
 #                         Path to NUCmer executable
 #   --blast_exe=BLAST_EXE
@@ -229,6 +231,9 @@ def parse_cmdline(args):
     parser.add_option("-m", "--method", dest="method",
                       action="store", default="ANIm",
                       help="ANI method [ANIm|ANIb|TETRA]")
+    parser.add_option("--maxmatch", dest="maxmatch",
+                      action="store_true", default=False,
+                      help="Override MUMmer to allow all NUCmer matches")
     parser.add_option("--nucmer_exe", dest="nucmer_exe",
                       action="store", default="nucmer",
                       help="Path to NUCmer executable")    
@@ -687,7 +692,7 @@ def process_delta(org_lengths):
                 logger.error("The NUCmer comparison between %s and %s " %\
                              (qname, sname) +\
                              "has no usable output. The comparison may be " +\
-                             "too distant for use")
+                             "too distant for use. Consider using --maxmatch.")
             logger.error(last_exception())
         lengths[(qname, sname)] = tot_length
         sim_errors[(qname, sname)] = tot_sim_error
@@ -893,7 +898,12 @@ def make_nucmer_cmd(f1, f2):
     prefix = os.path.join(options.outdirname, "%s_vs_%s" % \
                               (os.path.splitext(os.path.split(f1)[-1])[0],
                                os.path.splitext(os.path.split(f2)[-1])[0]))
-    cmd = "%s -mum -p %s %s %s" % (options.nucmer_exe, prefix, f1, f2)
+    # Do we use the --maxmatch option?
+    if options.maxmatch:
+        mode = "-maxmatch"
+    else:
+        mode = "-mum"
+    cmd = "%s %s -p %s %s %s" % (options.nucmer_exe, mode, prefix, f1, f2)
     return cmd
 
 # Construct a command-line for BLASTN
