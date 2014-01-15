@@ -550,6 +550,7 @@ def make_blast_dbs():
 
         For ANIb, the input sequence has been split into consecutive fragments.
     """
+    global CUM_RETVALS
     logger.info("Making BLAST databases for fragment files")
     cmdlines = []
     for fn in get_fasta_files():
@@ -652,6 +653,7 @@ def process_delta(org_lengths):
         - org_lengths is a dictionary of total sequence lengths for each 
               input sequence
     """
+    global CUM_RETVALS
     infiles = get_input_files(options.outdirname, '.delta')
     logger.info("Delta files:\n\t%s" % '\n\t'.join(infiles))
     logger.info("Processing .delta files")
@@ -796,6 +798,7 @@ def pairwise_blast(filenames):
         BLASTN command line for each pairwise comparison, and then pass those
         command lines to be run using multiprocessing.
     """
+    global CUM_RETVALS
     logger.info("Running pairwise BLASTN to generate *.blast_tab")
     cmdlines = []
     for idx, f1 in enumerate(filenames[:-1]):
@@ -822,6 +825,7 @@ def pairwise_nucmer(filenames):
         command lines for each pairwise comparison, and then pass those 
         command lines to be run using multiprocessing.
     """
+    global CUM_RETVALS
     logger.info("Running pairwise NUCmer comparison to generate *.delta")
     cmdlines = []
     for idx, f1 in enumerate(filenames[:-1]):
