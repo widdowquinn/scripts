@@ -141,8 +141,19 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #=============
-# IMPORTS
+# GLOBALS
 
+# Store the cumulative sum of returned values from multiprocessing runs.
+# If external apps are well-behaved, they should return 0 on successful 
+# execution, and some other integer otherwise. So, by keeping a running total 
+# of returned values from the multiprocessing callback, we can establish 
+# whether one or more of the external applications had an issue.
+# We use this in conjunction with thrown errors to suggest possible causes
+# and solutions for the error.
+CUM_RETVALS = 0
+
+#=============
+# IMPORTS
 
 import collections
 import logging
@@ -231,7 +242,7 @@ def parse_cmdline(args):
 
 # Report last exception as string
 def last_exception():
-    """ Returns last exception as a string, for use in logging.
+    """ Returns last exception as a string, or use in logging.
     """
     exc_type, exc_value, exc_traceback = sys.exc_info()
     return ''.join(traceback.format_exception(exc_type, exc_value, 
@@ -546,6 +557,10 @@ def make_blast_dbs():
     logger.info("BLAST makeblastdb command lines:\n\t%s" % \
                     '\n\t'.join(cmdlines))
     multiprocessing_run(cmdlines)
+    if 0 < CUM_RETVALS:           # At least one error
+        logger.error("At least one BLAST database creation step had a " +\
+                     "nonzero return value. ANIb may fail.")
+        CUM_RETVALS = 0           # Reset error
         
 
 # Get the list of FASTA files from the input directory
@@ -652,7 +667,26 @@ def process_delta(org_lengths):
         logger.info("Query organism: %s; Subject organism: %s" % \
                         (qname, sname))
         tot_length, tot_sim_error = parse_delta(dname)
-        perc_id = 1 - 1. * tot_sim_error/tot_length
+        try:
+            perc_id = 1 - 1. * tot_sim_error/tot_length
+        except ZeroDivisionError:
+            # If this is thrown, the proximate cause is an empty NUCmer output
+            # The root cause may be a failed NUCmer run (when CUM_RETVALS>0)
+            # or that one or more of the sequences is too distant for NUCmer
+            # to identify a similarity.
+            logger.error("One or more of the NUCmer output files contains " +\
+                         "no useable output.")
+            if 0 < CUM_RETVALS:
+                logger.error("One or more NUCmer runs failed. " +\
+                             "Please investigate.")
+                logger.error("Please retry the NUCmer comparison for " +\
+                             "%s vs %s manually" % (qname, sname))
+            else:
+                logger.error("The NUCmer comparison between %s and %s " %\
+                             (qname, sname) +\
+                             "has no usable output. The comparison may be " +\
+                             "too distant for use")
+            logger.error(last_exception())
         lengths[(qname, sname)] = tot_length
         sim_errors[(qname, sname)] = tot_sim_error
         perc_ids[(qname, sname)] = perc_id
@@ -770,6 +804,9 @@ def pairwise_blast(filenames):
     logger.info("BLASTN command lines:\n\t%s" % '\n\t'.join(cmdlines))
     if not options.skip_blast:
         multiprocessing_run(cmdlines)
+        if 0 < CUM_RETVALS:
+            logger.error("At least one BLAST comparison returned a nonzero " +\
+                         "value. ANIb may fail.")
     else:
         logger.warning("BLASTN run skipped!")
 
@@ -793,6 +830,9 @@ def pairwise_nucmer(filenames):
     logger.info("NUCmer command lines:\n\t%s" % '\n\t'.join(cmdlines))
     if not options.skip_nucmer:
         multiprocessing_run(cmdlines)
+        if 0 < CUM_RETVALS:
+            logger.error("At least one NUCmer comparison failed. ANIm " +\
+                         "may fail.")
     else:
         logger.warning("NUCmer run skipped!")
 
@@ -827,7 +867,11 @@ def logger_callback(val):
         - val is an integer returned by multiprocessing, describing the run
              status
     """
+    global CUM_RETVALS
     logger.info("Multiprocessing run completed with status: %s" % val)
+    # Keep track of returned values, as these help diagnose problems
+    # for ANIm analyses
+    CUM_RETVALS += val
 
 
 # Construct a command-line for NUCmer
