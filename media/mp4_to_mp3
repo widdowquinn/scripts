@@ -1,0 +1,20 @@
+#!/bin/bash
+#
+# mp4_to_mp3.sh
+#
+# Extract audio from all .mp4 files in the passed directory 
+# to .mp3 using FFmpeg (192kbps)
+#
+# (C) Leighton Pritchard 2011
+
+echo "m4a_to_mp3 v0.1"
+
+filelist=`ls $1/*.mp4`                    # List all .m4a files in the passed directory
+
+for filename in $filelist
+do
+    filestem=${filename%.mp4}             # Trim .m4a extension from filename
+    cmd="ffmpeg -i $filename -acodec libmp3lame -ab 192k $filestem.mp3"
+    echo $cmd                             # Echo command to screen
+    $cmd                                  # Run FFMpeg
+done
