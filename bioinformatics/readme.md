@@ -98,7 +98,7 @@ Options:
 * **Rpy2** <http://rpy.sourceforge.net/rpy2.html>
 
 
-### <a name="run_signalp">`run_signalp.py`</a>
+### <a name="run_signalp.py">`run_signalp.py`</a>
 
 This script takes a FASTA format file containing protein sequences as input, and runs a local copy of `signalp` (in the `$PATH`) on the contents, collecting the output generated with the `-short` option of `signalp`. 
 
@@ -116,6 +116,27 @@ The script runs `signalp` independently on  each split file, and the results are
 
 * **signalp** <http://www.cbs.dtu.dk/cgi-bin/nph-sw_request?signalp>
 * **Python** <http://www.python.org> (2.6+ required for `multiprocessing`)
+
+
+### <a name="run_tmhmm.py">`run_tmhmm.py`</a>
+
+This script takes a FASTA format file containing protein sequences as input, and runs a local copy of `tmhmm` (in the `$PATH`) on the contents, collecting the output generated with the `-short` option of `tmhmm`. 
+
+The script splits the input sequence file into a number of smaller FASTA files suitable for distributed processing using, e.g. with Python's `multiprocessing` module. It prepares intermediate files with a maximum of 1000 sequences per file, to avoid falling foul of the undocumented upper input limit of `tmhmm`.  
+
+The script runs `tmhmm` independently on  each split file, and the results are concatenated into a single output file. If no output file is specified, then the output file shares a stem with the input file.
+
+#### Usage ####
+
+```
+run_tmhmm.py <FASTAfile> [-o|--outfilename <output file>]
+```
+
+#### Dependencies
+
+* **tmhmm** <http://www.cbs.dtu.dk/cgi-bin/nph-sw_request?tmhmm>
+* **Python** <http://www.python.org> (2.6+ required for `multiprocessing`)
+
 
 ## Licensing
 
