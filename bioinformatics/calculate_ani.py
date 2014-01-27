@@ -104,6 +104,8 @@
 #   -g, --graphics        Generate heatmap of ANI
 #   -m METHOD, --method=METHOD
 #                         ANI method
+#   --maxmatch            Override MUMmer settings and allow all matches in 
+#                         NUCmer
 #   --nucmer_exe=NUCMER_EXE
 #                         Path to NUCmer executable
 #   --blast_exe=BLAST_EXE
@@ -141,8 +143,19 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #=============
-# IMPORTS
+# GLOBALS
 
+# Store the cumulative sum of returned values from multiprocessing runs.
+# If external apps are well-behaved, they should return 0 on successful 
+# execution, and some other integer otherwise. So, by keeping a running total 
+# of returned values from the multiprocessing callback, we can establish 
+# whether one or more of the external applications had an issue.
+# We use this in conjunction with thrown errors to suggest possible causes
+# and solutions for the error.
+CUM_RETVALS = 0
+
+#=============
+# IMPORTS
 
 import collections
 import logging
@@ -218,6 +231,9 @@ def parse_cmdline(args):
     parser.add_option("-m", "--method", dest="method",
                       action="store", default="ANIm",
                       help="ANI method [ANIm|ANIb|TETRA]")
+    parser.add_option("--maxmatch", dest="maxmatch",
+                      action="store_true", default=False,
+                      help="Override MUMmer to allow all NUCmer matches")
     parser.add_option("--nucmer_exe", dest="nucmer_exe",
                       action="store", default="nucmer",
                       help="Path to NUCmer executable")    
@@ -231,7 +247,7 @@ def parse_cmdline(args):
 
 # Report last exception as string
 def last_exception():
-    """ Returns last exception as a string, for use in logging.
+    """ Returns last exception as a string, or use in logging.
     """
     exc_type, exc_value, exc_traceback = sys.exc_info()
     return ''.join(traceback.format_exception(exc_type, exc_value, 
@@ -539,6 +555,7 @@ def make_blast_dbs():
 
         For ANIb, the input sequence has been split into consecutive fragments.
     """
+    global CUM_RETVALS
     logger.info("Making BLAST databases for fragment files")
     cmdlines = []
     for fn in get_fasta_files():
@@ -546,6 +563,10 @@ def make_blast_dbs():
     logger.info("BLAST makeblastdb command lines:\n\t%s" % \
                     '\n\t'.join(cmdlines))
     multiprocessing_run(cmdlines)
+    if 0 < CUM_RETVALS:           # At least one error
+        logger.error("At least one BLAST database creation step had a " +\
+                     "nonzero return value. ANIb may fail.")
+        CUM_RETVALS = 0           # Reset error
         
 
 # Get the list of FASTA files from the input directory
@@ -637,6 +658,7 @@ def process_delta(org_lengths):
         - org_lengths is a dictionary of total sequence lengths for each 
               input sequence
     """
+    global CUM_RETVALS
     infiles = get_input_files(options.outdirname, '.delta')
     logger.info("Delta files:\n\t%s" % '\n\t'.join(infiles))
     logger.info("Processing .delta files")
@@ -652,7 +674,26 @@ def process_delta(org_lengths):
         logger.info("Query organism: %s; Subject organism: %s" % \
                         (qname, sname))
         tot_length, tot_sim_error = parse_delta(dname)
-        perc_id = 1 - 1. * tot_sim_error/tot_length
+        try:
+            perc_id = 1 - 1. * tot_sim_error/tot_length
+        except ZeroDivisionError:
+            # If this is thrown, the proximate cause is an empty NUCmer output
+            # The root cause may be a failed NUCmer run (when CUM_RETVALS>0)
+            # or that one or more of the sequences is too distant for NUCmer
+            # to identify a similarity.
+            logger.error("One or more of the NUCmer output files contains " +\
+                         "no useable output.")
+            if 0 < CUM_RETVALS:
+                logger.error("One or more NUCmer runs failed. " +\
+                             "Please investigate.")
+                logger.error("Please retry the NUCmer comparison for " +\
+                             "%s vs %s manually" % (qname, sname))
+            else:
+                logger.error("The NUCmer comparison between %s and %s " %\
+                             (qname, sname) +\
+                             "has no usable output. The comparison may be " +\
+                             "too distant for use. Consider using --maxmatch.")
+            logger.error(last_exception())
         lengths[(qname, sname)] = tot_length
         sim_errors[(qname, sname)] = tot_sim_error
         perc_ids[(qname, sname)] = perc_id
@@ -762,6 +803,7 @@ def pairwise_blast(filenames):
         BLASTN command line for each pairwise comparison, and then pass those
         command lines to be run using multiprocessing.
     """
+    global CUM_RETVALS
     logger.info("Running pairwise BLASTN to generate *.blast_tab")
     cmdlines = []
     for idx, f1 in enumerate(filenames[:-1]):
@@ -770,6 +812,9 @@ def pairwise_blast(filenames):
     logger.info("BLASTN command lines:\n\t%s" % '\n\t'.join(cmdlines))
     if not options.skip_blast:
         multiprocessing_run(cmdlines)
+        if 0 < CUM_RETVALS:
+            logger.error("At least one BLAST comparison returned a nonzero " +\
+                         "value. ANIb may fail.")
     else:
         logger.warning("BLASTN run skipped!")
 
@@ -785,6 +830,7 @@ def pairwise_nucmer(filenames):
         command lines for each pairwise comparison, and then pass those 
         command lines to be run using multiprocessing.
     """
+    global CUM_RETVALS
     logger.info("Running pairwise NUCmer comparison to generate *.delta")
     cmdlines = []
     for idx, f1 in enumerate(filenames[:-1]):
@@ -793,6 +839,9 @@ def pairwise_nucmer(filenames):
     logger.info("NUCmer command lines:\n\t%s" % '\n\t'.join(cmdlines))
     if not options.skip_nucmer:
         multiprocessing_run(cmdlines)
+        if 0 < CUM_RETVALS:
+            logger.error("At least one NUCmer comparison failed. ANIm " +\
+                         "may fail.")
     else:
         logger.warning("NUCmer run skipped!")
 
@@ -827,7 +876,11 @@ def logger_callback(val):
         - val is an integer returned by multiprocessing, describing the run
              status
     """
+    global CUM_RETVALS
     logger.info("Multiprocessing run completed with status: %s" % val)
+    # Keep track of returned values, as these help diagnose problems
+    # for ANIm analyses
+    CUM_RETVALS += val
 
 
 # Construct a command-line for NUCmer
@@ -845,7 +898,12 @@ def make_nucmer_cmd(f1, f2):
     prefix = os.path.join(options.outdirname, "%s_vs_%s" % \
                               (os.path.splitext(os.path.split(f1)[-1])[0],
                                os.path.splitext(os.path.split(f2)[-1])[0]))
-    cmd = "%s -mum -p %s %s %s" % (options.nucmer_exe, prefix, f1, f2)
+    # Do we use the --maxmatch option?
+    if options.maxmatch:
+        mode = "-maxmatch"
+    else:
+        mode = "-mum"
+    cmd = "%s %s -p %s %s %s" % (options.nucmer_exe, mode, prefix, f1, f2)
     return cmd
 
 # Construct a command-line for BLASTN
