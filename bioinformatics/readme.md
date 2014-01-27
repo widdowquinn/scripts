@@ -8,11 +8,11 @@ The current set of scripts includes:
 
 * [`calculate_ani.py`](#calculate_ani): calculates whole genome similarity measures ANIb, ANIm, and TETRA, with tabular text and graphical output.
 * [`draw_gd_all_core.py`](#draw_gd_all_core)
-* [`find_asm_snps.py`](find_asm_snps)
-* [`get_NCBI_cds_from_protein.py`](get_NCBI_cds_from_protein)
-* [`restrict_long_contigs.py`](restrict_long_contigs)
-* [`run_signalp.py`](run_signalp): splits large files and parallelises for input to `SignalP`.
-* [`run_tmhmm.py`](run_tmhmm): splits large files and parallelises for input to `TMHMM`.
+* [`find_asm_snps.py`](#find_asm_snps)
+* [`get_NCBI_cds_from_protein.py`](#get_NCBI_cds_from_protein)
+* [`restrict_long_contigs.py`](#restrict_long_contigs)
+* [`run_signalp.py`](#run_signalp): splits large files and parallelises for input to `SignalP`.
+* [`run_tmhmm.py`](#run_tmhmm): splits large files and parallelises for input to `TMHMM`.
 
 ## Script READMEs
 
@@ -98,7 +98,7 @@ Options:
 * **Rpy2** <http://rpy.sourceforge.net/rpy2.html>
 
 
-### <a name="run_signalp.py">`run_signalp.py`</a>
+### <a name="run_signalp">`run_signalp.py`</a>
 
 This script takes a FASTA format file containing protein sequences as input, and runs a local copy of `signalp` (in the `$PATH`) on the contents, collecting the output generated with the `-short` option of `signalp`. 
 
@@ -118,7 +118,7 @@ The script runs `signalp` independently on  each split file, and the results are
 * **Python** <http://www.python.org> (2.6+ required for `multiprocessing`)
 
 
-### <a name="run_tmhmm.py">`run_tmhmm.py`</a>
+### <a name="run_tmhmm">`run_tmhmm.py`</a>
 
 This script takes a FASTA format file containing protein sequences as input, and runs a local copy of `tmhmm` (in the `$PATH`) on the contents, collecting the output generated with the `-short` option of `tmhmm`. 
 
