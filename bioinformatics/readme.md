@@ -9,7 +9,7 @@ The current set of scripts includes:
 * [`calculate_ani.py`](#calculate_ani): calculates whole genome similarity measures ANIb, ANIm, and TETRA, with tabular text and graphical output.
 * [`draw_gd_all_core.py`](#draw_gd_all_core)
 * [`find_asm_snps.py`](#find_asm_snps)
-* [`get_NCBI_cds_from_protein.py`](#get_NCBI_cds_from_protein)
+* [`get_NCBI_cds_from_protein.py`](#get_NCBI_cds_from_protein) Given input of protein sequences with suitably-formatted identifiers, retrieves the corresponding coding sequence from NCBI, using Entrez.
 * [`restrict_long_contigs.py`](#restrict_long_contigs)
 * [`run_signalp.py`](#run_signalp): splits large files and parallelises for input to `SignalP`.
 * [`run_tmhmm.py`](#run_tmhmm): splits large files and parallelises for input to `TMHMM`.
@@ -97,6 +97,61 @@ Options:
 * **R** with shared libraries installed on the system <http://cran.r-project.org/>
 * **Rpy2** <http://rpy.sourceforge.net/rpy2.html>
 
+### <a name="get_NCBI_cds_from_protein">`get_NCBI_cds_from_protein.py`</a>
+
+Given input of protein sequences with suitably-formatted identifier strings (e.g. those in the NCBI nr database, having `>gi|[0-9]|.*` as their identifier), this script uses Entrez tools to find corresponding coding sequences where possible.
+
+If the `--sto` option is used, sequence identifiers of the format `<seqid>|/<start>-<end> >gi|[0-9].*|/[0-9]*-[0-9]*` will be interpreted as Stockholm sequence headers, as described at <http://sonnhammer.sbc.su.se/Stockholm.html>
+
+Unless the `--keepcache` option is passed, all data obtained from Entrez retained in local cache files, to aid debugging and limit network traffic, will be deleted when the script completes. By default, caches will have a  filestem reflecting the time that the script was run.  Cache filestems can be specified by the `-c` or `--cachestem` option; if the cache already exists, it  will be reused, and not overwritten.  This is useful for debugging.
+
+An email address must be provided for Entrez, using the `-e` or `--email` option.
+
+Queries will be batched in groups of 500 using EPost by default.  Batch size can be specified with `-b` or `--batchsize`.
+
+Sequences can be provided via stdin, and output sequences are written to  stdout, by default.  Specifying a filename with `-o` or `--outfilename` writes output to that file.
+
+The script runs as follows:
+
+* Collect input sequences with valid sequence identifiers
+* Check identifiers against an ELink cache of `protein_nuccore` searches. Where there is an entry in the cache, use this.  For sequences with no cache entry, compile identifiers in batches and submit queries in a `protein_nuccore `search with EPost. Add the recovered results to the ELink cache.
+* Collect identifiers from the Elink results, and check against a cache of   GenBank headers.  For identifiers with no cache entry, compile identifiers in batches and submit an EFetch for the GenBank headers using EPost, caching the results.
+* For each of the query protein sequences, choose the shortest potential nucleotide coding sequence from the GenBank header cache, and check its    identifier against the full GenBank record cache.  For identifiers with no cache entry, compile them in batches and submit an EFetch for the complete GenBank record, and cache the results.
+* For each of the query protein sequences, get the corresponding CDS from the cached full GenBank sequence on the basis of a matching `GI:[0-9]*` value in a `db_xref` qualifier (and/or a matching `protein_id` qualifier if there's a suitable accession in the query sequence header.
+* Extract the CDS nucleotide sequence from the parent sequence, and write to the output stream, with appropriate headers.
+
+While the script runs, the important query and CDS data are kept in the results dictionary, keyed by query ID, with value a dictionary containing the sequence identifier, query AA sequence, query GI ID, and eventually the matching CDS feature, its sequence and, if the Stockholm header format is  set, the sequence that codes for the region specified in the query header.
+
+#### Usage
+
+```
+Usage: get_NCBI_cds_from_protein.py [options]
+
+Options:
+  -h, --help            show this help message and exit
+  -o OUTFILENAME, --outfile=OUTFILENAME
+                        Output FASTA sequence filename
+  -i INFILENAME, --infile=INFILENAME
+                        Input FASTA sequence file
+  -v, --verbose         Give verbose output
+  -e EMAIL, --email=EMAIL
+                        Entrez email
+  -c CACHESTEM, --cachestem=CACHESTEM
+                        Suffix for cache filestem
+  -b BATCHSIZE, --batchsize=BATCHSIZE
+                        Batchsize for EPost submissions
+  -r RETRIES, --retries=RETRIES
+                        Maximum number of Entrez retries
+  -l LIMIT, --limit=LIMIT
+                        Limit number of sequences processed (for testing)
+  --keepcache           Keep cache files for debugging purposes
+  --sto                 Parse .*/start-end identifiers as sequence regions
+```
+
+#### Dependencies
+
+* **Biopython** <http://www.biopython.org>
+
 
 ### <a name="run_signalp">`run_signalp.py`</a>
 
@@ -115,7 +170,7 @@ The script runs `signalp` independently on  each split file, and the results are
 #### Dependencies
 
 * **signalp** <http://www.cbs.dtu.dk/cgi-bin/nph-sw_request?signalp>
-* **Python** <http://www.python.org> (2.6+ required for `multiprocessing`)
+* **Python 2.6+** <http://www.python.org> (2.6+ required for `multiprocessing`)
 
 
 ### <a name="run_tmhmm">`run_tmhmm.py`</a>
@@ -135,7 +190,7 @@ run_tmhmm.py <FASTAfile> [-o|--outfilename <output file>]
 #### Dependencies
 
 * **tmhmm** <http://www.cbs.dtu.dk/cgi-bin/nph-sw_request?tmhmm>
-* **Python** <http://www.python.org> (2.6+ required for `multiprocessing`)
+* **Python 2.6+** <http://www.python.org> (2.6+ required for `multiprocessing`)
 
 
 ## Licensing
