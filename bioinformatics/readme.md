@@ -97,6 +97,26 @@ Options:
 * **R** with shared libraries installed on the system <http://cran.r-project.org/>
 * **Rpy2** <http://rpy.sourceforge.net/rpy2.html>
 
+
+### <a name="run_signalp">`run_signalp.py`</a>
+
+This script takes a FASTA format file containing protein sequences as input, and runs a local copy of `signalp` (in the `$PATH`) on the contents, collecting the output generated with the `-short` option of `signalp`. 
+
+The script splits the input sequence file into a number of smaller FASTA files suitable for distributed processing using, e.g. with Python's `multiprocessing` module. It prepares intermediate files with a maximum of 1000 sequences per file, to avoid falling foul of the undocumented upper input limit of `signalp`.  
+
+The script runs `signalp` independently on  each split file, and the results are concatenated into a single output file. If no output file is specified, then the output file shares a stem with the input file. The organism type is specified at the command line in the same way as for `signalp`.
+
+#### Usage ####
+
+```
+[python] run_signalp.py [euk|gram+|gram-] <FASTAfile> [-o|--outfilename <output file>]
+```
+
+#### Dependencies
+
+* **signalp** <http://www.cbs.dtu.dk/cgi-bin/nph-sw_request?signalp>
+* **Python** <http://www.python.org> (2.6+ required for `multiprocessing`)
+
 ## Licensing
 
 Unless otherwise indicated in the script, all code is subject to the following agreement:
