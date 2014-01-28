@@ -208,6 +208,21 @@ Options:
   -v, --verbose         Give verbose output
 ```
 
+The script can be run on the test data in the directory `test_contigs` as follows:
+
+```
+$ ./restrict_long_contigs.py test_contigs/ test_contigs_out
+WARNING: Output directory test_contigs_out does not exist: creating it
+$ grep -c '>' test_contigs/*
+test_contigs/contigs_0.fa:27
+test_contigs/contigs_1.fa:45
+test_contigs/contigs_2.fa:47
+$ grep -c '>' test_contigs_out/*
+test_contigs_out/contigs_0_restricted.fa:23
+test_contigs_out/contigs_1_restricted.fa:24
+test_contigs_out/contigs_2_restricted.fa:24
+```
+
 #### Dependencies
 
 * **Biopython** <http://www.biopython.org>
