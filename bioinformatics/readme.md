@@ -7,10 +7,10 @@ This repository contains a set of scripts for use in bioinformatics work. The de
 The current set of scripts includes:
 
 * [`calculate_ani.py`](#calculate_ani): calculates whole genome similarity measures ANIb, ANIm, and TETRA, with tabular text and graphical output.
-* [`draw_gd_all_core.py`](#draw_gd_all_core)
+* [`draw_gd_all_core.py`](#draw_gd_all_core): example script for use of GenomeDiagram. **NOTE: script will not run as provided without modification**
 * [`find_asm_snps.py`](#find_asm_snps)
-* [`get_NCBI_cds_from_protein.py`](#get_NCBI_cds_from_protein) Given input of protein sequences with suitably-formatted identifiers, retrieves the corresponding coding sequence from NCBI, using Entrez.
-* [`restrict_long_contigs.py`](#restrict_long_contigs) From a directory of FASTA files, generates a new directory of corresponding FASTA files where all sequences shorter than a specified length have been removed.
+* [`get_NCBI_cds_from_protein.py`](#get_NCBI_cds_from_protein): Given input of protein sequences with suitably-formatted identifiers, retrieves the corresponding coding sequence from NCBI, using Entrez.
+* [`restrict_long_contigs.py`](#restrict_long_contigs): From a directory of FASTA files, generates a new directory of corresponding FASTA files where all sequences shorter than a specified length have been removed.
 * [`run_signalp.py`](#run_signalp): splits large files and parallelises for input to `SignalP`.
 * [`run_tmhmm.py`](#run_tmhmm): splits large files and parallelises for input to `TMHMM`.
 
