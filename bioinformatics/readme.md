@@ -10,7 +10,7 @@ The current set of scripts includes:
 * [`draw_gd_all_core.py`](#draw_gd_all_core)
 * [`find_asm_snps.py`](#find_asm_snps)
 * [`get_NCBI_cds_from_protein.py`](#get_NCBI_cds_from_protein) Given input of protein sequences with suitably-formatted identifiers, retrieves the corresponding coding sequence from NCBI, using Entrez.
-* [`restrict_long_contigs.py`](#restrict_long_contigs)
+* [`restrict_long_contigs.py`](#restrict_long_contigs) From a directory of FASTA files, generates a new directory of corresponding FASTA files where all sequences shorter than a specified length have been removed.
 * [`run_signalp.py`](#run_signalp): splits large files and parallelises for input to `SignalP`.
 * [`run_tmhmm.py`](#run_tmhmm): splits large files and parallelises for input to `TMHMM`.
 
@@ -152,6 +152,30 @@ Options:
 
 * **Biopython** <http://www.biopython.org>
 
+
+### <a name="restrict_long_contigs">`restrict_long_contigs.py`</a>
+
+A short script that takes as input a directory containing (many) FASTA files describing biological sequences, and writes to a new, named directory multiple FASTA files containing the same sequences, but restricted only to those sequences whose length is greater than a passed value.
+
+Example usage: You have a directory with many sets of contigs from an assembly. This script will produce a new directory of the same data where the contig lengths are restricted to being greater than a specified length.
+
+#### Usage
+
+```
+Usage: restrict_long_contigs.py [options] <input_directory> <output_directory>
+
+Options:
+  -h, --help            show this help message and exit
+  -l MINLEN, --minlen=MINLEN
+                        Minimum length of sequence
+  -s SUFFIX, --filesuffix=SUFFIX
+                        Suffix to indicate the file was processed
+  -v, --verbose         Give verbose output
+```
+
+#### Dependencies
+
+* **Biopython** <http://www.biopython.org>
 
 ### <a name="run_signalp">`run_signalp.py`</a>
 
