@@ -84,6 +84,20 @@ Options:
                          Path to BLAST+ makeblastdb executable
 ```
 
+Example data and output can be found in the directory `test_ani_data`. The data are chromosomes of four isolates of *Caulobacter*. Analyses can be performed with the command lines:
+
+```
+$ ./calculate_ani.py -i test_ani_data/ -o test_ani_data_ANIb -m ANIb -g --format=png
+$ ./calculate_ani.py -i test_ani_data/ -o test_ani_data_ANIm -m ANIm -g --format=png
+$ ./calculate_ani.py -i test_ani_data/ -o test_ani_data_TETRA -m TETRA -g --format=png
+```
+
+which generate the following graphical output, supporting the assignment of `NC_002696` and `NC_011916` to the same species (*C.crescentus*), and the other two isolates to distinct species (`NC_014100`:*C.segnis*; `NC_010338`:*C.* sp K31):
+
+![ANIb graphical output for *Caulobacter* test data](test_ani_data/ANIb.png "ANIb graphical output")
+![ANIm graphical output for *Caulobacter* test data](test_ani_data/ANIm.png "ANIm graphical output")
+![TETRA graphical output for *Caulobacter* test data](test_ani_data/TETRA.png "TETRA graphical output")
+
 #### Dependencies
 
 (mandatory)
