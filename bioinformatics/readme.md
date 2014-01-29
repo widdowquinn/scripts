@@ -111,11 +111,11 @@ which generate the following graphical output, supporting the assignment of `NC_
 * **R** with shared libraries installed on the system <http://cran.r-project.org/>
 * **Rpy2** <http://rpy.sourceforge.net/rpy2.html>
 
-### <a name="draw_gd_all_core">`draw_gd_all_Core.py`</a>
+### <a name="draw_gd_all_core">`draw_gd_all_core.py`</a>
 
 This script was made available to provide demonstration GenomeDiagram usage code, as part of a [Twitter conversation](https://twitter.com/widdowquinn/status/411165587297951744/photo/1). The script renders the image in the photograph, which is the same as that at the foot of [this blog post](http://armchairbiology.blogspot.co.uk/2012/09/the-colours-man-colours.html).
 
-**NOTE: The script will not run without modification unless you have both the required data, and the as yet unreleased `iadhore.py` module.**
+**NOTE: The script will not run without modification unless you have both the required data, and the [`iadhore.py`](https://github.com/widdowquinn/pyADHoRe) module.**
 
 #### Usage
 
@@ -128,7 +128,7 @@ draw_gd_all_core.py
 * **Biopython** <http://www.biopython.org>
 * **Reportlab** <http://www.reportlab.org> 
 * **ColorSpiral** <https://github.com/widdowquinn/ColorSpiral> (this has since been incorporated into Biopython, but this script relies on the standalone library)
-* **iAdhore.py** (not yet publicly available)
+* **iAdhore.py** <https://github.com/widdowquinn/pyADHoRe>
 * **relevant data** (not yet publicly available)
 
 
