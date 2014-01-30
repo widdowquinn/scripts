@@ -123,6 +123,10 @@ This script was made available to provide demonstration GenomeDiagram usage code
 draw_gd_all_core.py
 ```
 
+With the appropriate data for input, this renders the image:
+
+![Graphical output from `draw_gd_all_core.py`](images/Dickeya_core_collinear.png "Dickeya core collinear regions")
+
 #### Dependencies
 
 * **Biopython** <http://www.biopython.org>
