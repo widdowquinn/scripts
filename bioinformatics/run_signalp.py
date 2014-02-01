@@ -8,7 +8,7 @@
 # This script splits the input file into a number of smaller FASTA files
 # suitable for distributed processing using, e.g. multiprocessing, with
 # a maximum number of sequences per file of 1000 to avoid falling foul
-# of SIGNALP's undocumented upper limit.  SIGNALP is run independently on 
+# of SIGNALP's undocumented upper limit.  SIGNALP is run independently on
 # each split file, and the results concatenated into the output file.
 # If no output file is specified, then the output file shares a stem with
 # the input file.
@@ -102,7 +102,7 @@ def split_sequences(seqlist, nomulti):
         cpus = 1
     else:
         cpus = multiprocessing.cpu_count()    # Count of available CPUs
-    
+
     # What size of subset do we need?
     if len(seqlist) <= cpus:
         subset_size = 1
@@ -126,10 +126,11 @@ def mp_run(clines, poolsize):
     pool_output = [pool.apply_async(subprocess.call,
                                     (str(cline), ),
                                     {'stderr': subprocess.PIPE,
-                                     'shell': sys.platform!="win32"})
+                                     'shell': sys.platform != "win32"})
                    for cline in clines]
     pool.close()           # Run jobs
     pool.join()
+
 
 # Create a set of command-lines to run SIGNALP on the passed list of input
 # files, and to return the list of output filenames
@@ -152,7 +153,7 @@ def run_signalp(filenames, organism, nomulti):
     # Pass the command-lines on to be run
     if nomulti:
         for cline in clines:
-            subprocess.call(cline, shell=sys.platform!='win32')
+            subprocess.call(cline, shell=sys.platform != 'win32')
     else:
         mp_run(clines, multiprocessing.cpu_count())
 
@@ -162,8 +163,6 @@ def run_signalp(filenames, organism, nomulti):
 
     # Return the list of output files
     return outfilenames
-                                    
-
 
 ###
 # SCRIPT
@@ -193,27 +192,26 @@ if __name__ == '__main__':
                                     '%s.%d.fas' % (filestem, idx))
         subset_filenames.append(new_filename)
         SeqIO.write(ss, new_filename, 'fasta')
-        
+
     # Run SIGNALP on each of the sequence subsets
     output_filenames = run_signalp(subset_filenames, organism,
                                    options.nomulti)
 
     # Collate the output filenames together
-    outfilename = os.path.splitext(infilename)[0]+'.sigp' if not \
-                             options.outfilename else options.outfilename
+    outfilename = os.path.splitext(infilename)[0]+'.sigp' if not\
+        options.outfilename else options.outfilename
     # Seed output with the first output file
     cline = 'cat %s > %s' % (output_filenames[0], outfilename)
     if options.verbose:
         print cline
-    subprocess.call(cline, shell=sys.platform!='win32')
+    subprocess.call(cline, shell=sys.platform != 'win32')
     # Process the rest of the files to remove headers
     for ofile in output_filenames[1:]:
         cline = "cat %s | awk 'FNR>2{print}' >> %s" % (ofile, outfilename)
         if options.verbose:
             print cline
-        subprocess.call(cline, shell=sys.platform!='win32')
+        subprocess.call(cline, shell=sys.platform != 'win32')
 
     # Clean up /var/tmp/signalp
     for ofile in output_filenames:
         os.unlink(ofile)
-
