@@ -53,7 +53,7 @@ from ColorSpiral import get_color_dict, get_colors
 from iadhore import IadhoreData
 
 # Genome data: (id, GenBank file location)
-# We list organisms in the order we want to present them, which is from 
+# We list organisms in the order we want to present them, which is from
 # 'outside-in' on the clade tree (GenomeDiagram orders from the bottom-up)
 orgs = ('DPA2511', 'DPA703',
         'DXXRW240', 'DXXDW0440',
@@ -68,7 +68,8 @@ orgs = ('DPA2511', 'DPA703',
 # List of organisms that need to be reverse complemented
 reverse = ('DCH1591', 'DCH3533', 'DCH516', 'DCH402', 'DPA2511', 'DPA703')
 
-gbkdir = '/mnt/synology_Dickeya_sequencing/Annotations/20120813_local_genbank_annotation/'
+gbkdir = '/mnt/synology_Dickeya_sequencing/Annotations/' +\
+         '20120813_local_genbank_annotation/'
 refdir = '/mnt/synology_Dickeya_sequencing/NCBI_GenBank_reference/'
 genome_data = {'DPA2511': (gbkdir, 'NCPPB_2511_draft.gbk'),
                'DPA703': (refdir, 'NC_012880.gbk'),
@@ -79,7 +80,7 @@ genome_data = {'DPA2511': (gbkdir, 'NCPPB_2511_draft.gbk'),
                'DZE586': (refdir, 'NC_013592.gbk'),
                'DZE3532': (gbkdir, 'NCPPB_3532_draft.gbk'),
                'DZEMK19': (gbkdir, 'MK19_draft.gbk'),
-               'DZE2538': (gbkdir, 'NCPPB_2538_draft.gbk') ,
+               'DZE2538': (gbkdir, 'NCPPB_2538_draft.gbk'),
                'DCH1591': (refdir, 'NC_012912.gbk'),
                'DCH3533': (gbkdir, 'NCPPB_3533_draft.gbk'),
                'DCH516': (gbkdir, 'NCPPB_516_draft.gbk'),
@@ -148,9 +149,9 @@ for midx, m in enumerate(full_leaves):
     print "Cross-linking multiplicon %d" % m
     for idx in range(1, len(orgs)):
         org1, org2 = orgs[idx-1], orgs[idx]
-        org1loc = list(chain.from_iterable([get_ft_loc(org1, f) for f in \
+        org1loc = list(chain.from_iterable([get_ft_loc(org1, f) for f in
                                             segments[org1]]))
-        org2loc = list(chain.from_iterable([get_ft_loc(org2, f) for f in \
+        org2loc = list(chain.from_iterable([get_ft_loc(org2, f) for f in
                                             segments[org2]]))
         org1ft = (tracks[org1], min(org1loc), max(org1loc))
         org2ft = (tracks[org2], min(org2loc), max(org2loc))
@@ -164,11 +165,11 @@ for midx, m in enumerate(full_leaves):
         # We add org1 here, then the final org when the looping's done
         f = SeqFeature(FeatureLocation(min(org1loc), max(org1loc)),
                        strand=None)
-        regionsets[org1].add_feature(f, label=False,
-                                     color=colors.Color(region_colours[midx][0],
-                                                        region_colours[midx][1],
-                                                        region_colours[midx][2],
-                                                        0.5))
+        regionsets[org1].add_feature(f, label=False, color=
+                                     colors.Color(region_colours[midx][0],
+                                                  region_colours[midx][1],
+                                                  region_colours[midx][2],
+                                                  0.5))
     # Finish off the cross-link features
     f = SeqFeature(FeatureLocation(min(org2loc), max(org2loc)),
                    strand=None)
@@ -177,7 +178,7 @@ for midx, m in enumerate(full_leaves):
                                                     region_colours[midx][1],
                                                     region_colours[midx][2],
                                                     0.5))
-        
+
 # Add annotated organism features
 for l, org in enumerate(orgs):
     print "Adding features for %s" % org
@@ -186,9 +187,9 @@ for l, org in enumerate(orgs):
     for feature in [f for f in records[org].features if f.type == 'CDS']:
         label_state = not label_state
         featuresets[org].add_feature(feature, color=org_colours[org],
-                                     label=False , sigil="ARROW",
+                                     label=False, sigil="ARROW",
                                      label_size=3)
-    
+
 # Render image
 print "Rendering"
 gdd.draw(format='linear', orientation='landscape',
