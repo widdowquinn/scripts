@@ -22,6 +22,10 @@
 #
 # DEPENDENCIES:
 #
+# - Biopython
+# - Python 2.6+ (for multiprocessing)
+# - Pandas
+#
 # USAGE: run_MLST.py [-h] [-o OUTFILENAME] [-i INDIRNAME] [-p PROFILE] [-v]
 #                    [--blast_exe BLAST_EXE]
 #
@@ -45,10 +49,12 @@
 # - The set of MLST sequences are used as a BLASTN query against the
 #   input genome. Larsen et al. (2012) implies default parameters, so default
 #   parameters are used.
-# - The 'correct' allele is chosen on the basis of Length Score (LS), which
-#   is calculated as LS = QL - HL + G where QL is the length of the MLST
+# - The 'correct' allele is chosen on the basis of: (1) Length Score (LS),
+#   which is calculated as LS = QL - HL + G where QL is the length of the MLST
 #   query allele, HL is the length of BLASTN's reported HSP, and G is the
-#   number of reported gaps in that HSP. A low LS score is better.
+#   number of reported gaps in that HSP - a low LS score is better; and (2)
+#   percentage identity of the match. This is the method proposed in Larsen
+#   et al. (2012)
 # - The combination of identified alleles is then used to determine the ST,
 #   on the basis of an MLST profile table.
 #
@@ -92,6 +98,7 @@ from argparse import ArgumentParser
 import logging
 import logging.handlers
 
+import csv
 import multiprocessing
 import os
 import shutil
@@ -101,6 +108,8 @@ import time
 import traceback
 
 from Bio import SeqIO
+
+import pandas as pd
 
 #================
 # FUNCTIONS
@@ -224,24 +233,75 @@ def run_blast(alleles, genomes):
     logger.info("Running BLASTN-2-sequences to identify alleles in each " +
                 "genome")
     cmdlines = []
+    blastoutfiles = {}
     for allele, data in alleles.items():
         for isolate, filename in genomes.items():
+            outfilename = os.path.join(args.outdirname, "%s_vs_%s.tab" %
+                                       (allele, isolate))
             cmdlines.append(make_blast_cmd(allele, isolate, data[0], 
-                                           filename))
+                                           filename, outfilename))
+            blastoutfiles[(isolate, allele)] = outfilename
     logger.info("Generated %d command-lines" % len(cmdlines))
     multiprocessing_run(cmdlines)
+    return blastoutfiles
             
 
+# Assign alleles to isolates
+def assign_alleles(filedict, df):
+    """ Takes a dataframe (df) and a dictionary of filenames keyed by (row,
+        column) of that dataframe, and reads the contents of the file -
+        a BLASTN comparison of alleles to the isolate, assigning the 'best'
+        allele number to each genome on the basis of the LS score and
+        percentage identity, as in Larsen et al. (2012).
+    """
+    for k, v in filedict.items():
+        best_allele = find_best_allele(v)
+        df.loc[k[0], k[1]] = best_allele
+    return df
+
+
+# Find the 'best' allele from a BLASTN output file
+def find_best_allele(filename):
+    """ Identifies the 'best' allele according to Larsen et al. (2012) from
+        the BLASTN output file
+    """
+    with open(filename, 'r') as fh:
+        csvreader = csv.DictReader(fh, delimiter='\t',
+                                   fieldnames=['qseqid', 'sseqid', 'pident',
+                                               'qlen', 'length', 'gaps', 
+                                               'mismatch'])
+        # Hold 'best' allele by LS and percentage identity
+        best_ls = (None, None, None)
+        best_pident = (None, None, None)
+        # Identify 'best' allele
+        for row in csvreader:
+            allele = row['qseqid'].split('_')[-1]
+            ls = int(row['qlen']) - int(row['length']) + int(row['gaps'])
+            pident = float(row['pident'])
+            if pident > best_pident[1]:
+                best_pident = (ls, pident, allele)
+            if best_ls is None:
+                best_ls = (ls, pident, allele)
+            elif ls <= best_ls and pident > best_ls[1]:
+                best_ls = (ls, pident, allele)                
+        if best_ls[-1] != best_pident[-1]:
+            logger.warning("%s: Same allele not identified by LS and %%ID" %
+                           filename)
+            logger.warning("Best LS: %s" % str(best_ls))
+            logger.warning("Best %%ID: %s" % str(best_pident))
+        return best_ls[-1]
+        
+                
+
 # Construct a BLASTN-2-sequences command line (default settings)
-def make_blast_cmd(qid, sid, qfilename, sfilename):
+def make_blast_cmd(qid, sid, qfilename, sfilename, outfilename):
     """ Construct a default BLASTN-2-sequences command line from the passed
         query identifier and filename (qid, qfilename), and subject 
-        identifier and filename (sid, sfilename).
+        identifier and filename (sid, sfilename), placing the result in 
+        the file outfilename.
     """
-    outfile = os.path.join(args.outdirname, "%s_vs_%s.tab" %
-                           (qid, sid))
     cmdline = "%s -query %s -subject %s -out %s" %\
-              (args.blast_exe, qfilename, sfilename, outfile)
+              (args.blast_exe, qfilename, sfilename, outfilename)
     # Custom format for output
     cmdline += " -outfmt '6 qseqid sseqid pident qlen length gaps mismatch'"
     return cmdline
@@ -394,4 +454,12 @@ if __name__ == '__main__':
     make_outdir()
 
     # BLASTN allele sequences against the input genome
-    blastoutfile = run_blast(alleles, genomes)
+    blastoutfiles = run_blast(alleles, genomes)
+
+    # Create a dataframe with genomes as rows, and alleles as columns.
+    # We'll populate these as we process our BLAST output
+    df = pd.DataFrame(index=genomes.keys(), columns=alleles.keys())
+
+    # Assign alleles to isolates
+    df = assign_alleles(blastoutfiles, df)
+    print df
