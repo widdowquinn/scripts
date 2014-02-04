@@ -6,7 +6,8 @@
 # wikitable markup, preserving headers and titles where possible.
 #
 # USAGE: tabular_to_mediawiki.py [-h] [-o OUTFILENAME] [-i INFILENAME] [-v]
-#                                [--header HEADER] [--title TITLE]
+#                                [--header HEADER] [-t TITLE] [--skip SKIP] [-s]
+#                                [-c]
 #
 # optional arguments:
 #   -h, --help            show this help message and exit
@@ -18,7 +19,12 @@
 #   --header HEADER       If not passed a string of comma-separated headers,
 #                         assumes first line of input tab-separated file is the
 #                         header line
-#   --title TITLE         Set the title of the resulting MediaWiki table
+#   -t TITLE, --title TITLE
+#                         Set the title of the resulting MediaWiki table
+#   --skip SKIP           Number of lines to skip at the start of the input
+#                         file, before reading the header
+#   -s, --sortable        Make the MediaWiki table sortable
+#   -c, --collapsible     Make the MediaWiki table collapsible
 #
 # (c) The James Hutton Institute 2014
 # Authors: Leighton Pritchard
@@ -87,6 +93,10 @@ def parse_cmdline(args):
     parser.add_argument("-t", "--title", dest="title",
                         action="store", default=None,
                         help="Set the title of the resulting MediaWiki table")
+    parser.add_argument("--skip", dest="skip",
+                        action="store", default=0, type=int,
+                        help="Number of lines to skip at the start of the " +
+                        "input file, before reading the header")
     parser.add_argument("-s", "--sortable", dest="sortable",
                         action="store_true",
                         help="Make the MediaWiki table sortable")
@@ -117,12 +127,15 @@ def process_stream(infh, outfh):
     """
     # Read in the input stream into a list of lines
     try:
-        tbldata = infh.readlines()
+        tbldata = list(infh.readlines())
     except:
         logger.error("Could not process input (exiting)")
         logger.error(last_exception())
         sys.exit(1)
     logger.info("Read %d lines from input" % len(tbldata))
+
+    tbldata = tbldata[int(args.skip):]
+    logger.info("Skipping %d lines from input" % args.skip)
 
     # How many columns are we expecting?
     cols = max([len(e.split('\t')) for e in tbldata])
