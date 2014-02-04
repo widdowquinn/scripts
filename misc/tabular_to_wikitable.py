@@ -6,8 +6,8 @@
 # wikitable markup, preserving headers and titles where possible.
 #
 # USAGE: tabular_to_mediawiki.py [-h] [-o OUTFILENAME] [-i INFILENAME] [-v]
-#                                [--header HEADER] [-t TITLE] [--skip SKIP] [-s]
-#                                [-c]
+#                                [--header HEADER] [-t TITLE] [--skip SKIP]
+#                                [-s] [-c]
 #
 # optional arguments:
 #   -h, --help            show this help message and exit
@@ -149,7 +149,7 @@ def process_stream(infh, outfh):
     if args.collapsible:
         classes.append("mw-collapsible")
     # Apologies for the ternary operator
-    tblclass = tblclass % (str(' ' if len(classes) else '') + 
+    tblclass = tblclass % (str(' ' if len(classes) else '') +
                            ' '.join(classes))
     initstr = '{|%s' % tblclass
 
