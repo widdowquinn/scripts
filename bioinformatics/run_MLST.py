@@ -92,10 +92,15 @@ from argparse import ArgumentParser
 import logging
 import logging.handlers
 
+import multiprocessing
 import os
+import shutil
+import subprocess
 import sys
+import time
 import traceback
 
+from Bio import SeqIO
 
 #================
 # FUNCTIONS
@@ -105,19 +110,28 @@ def parse_cmdline(args):
     """ Parse command-line arguments
     """
     parser = ArgumentParser(prog="run_MLST.py")
-    parser.add_argument("-o", "--outfile", dest="outfilename",
+    parser.add_argument("-o", "--outdir", dest="outdirname",
                         action="store", default=None, type=str,
-                        help="Output MLST classification table")
+                        help="Output MLST classification data directory")
     parser.add_argument("-i", "--indirname", dest="indirname",
                         action="store", default=None, type=str,
                         help="Directory containing MLST allele sequence files")
+    parser.add_argument("-g", "--genomedir", dest="genomedir",
+                        action="store", default=None, type=str,
+                        help="Directory containing genome sequence files")
     parser.add_argument("-p", "--profile", dest="profile",
                         action="store", default=None, type=str,
                         help="Tab-separated plain text table describing " +
                         "MLST classification scheme.")
+    parser.add_argument("-l", "--logfile", dest="logfile",
+                        action="store", default=None, type=str,
+                        help="Logfile location")
     parser.add_argument("-v", "--verbose", dest="verbose",
                         action="store_true",
                         help="Give verbose output")
+    parser.add_argument("-f", "--force", dest="force",
+                        action="store_true",
+                        help="Force overwriting of output directory")
     parser.add_argument("--blast_exe", dest="blast_exe",
                         action="store", default="blastn",
                         help="Path to BLASTN+ executable")
@@ -133,13 +147,189 @@ def last_exception():
                                               exc_traceback))
 
 
+# Process the allele sequences from the input directory
+def load_alleles():
+    """ Identify the FASTA files in the input directory, and the genes/
+        allele numbers involved.
+
+        Return a dictionary of (filename, number of alleles) tuples, 
+        keyed by gene name.
+    """
+    # We keep all our data in a dictionary:
+    allele_dict = {}
+    # Get the list of FASTA files to process
+    logger.info("Processing input directory %s" % args.indirname)
+    try:
+        fastalist = get_input_files(args.indirname, 
+                                    '.fasta', '.fas', '.fna', '.fa')
+    except:
+        logger.error("Could not identify FASTA files in directory %s " %
+                     args.indirname + "(exiting)")
+        logger.error(last_exception())
+        sys.exit(1)
+    # Loop over the FASTA sequences, and identify the genes and alleles.
+    # We assume that the standard PubMLST identifier format is being used:
+    # >gene_N
+    # where gene is the gene name, and N is the allele number
+    for filename in fastalist:
+        try:
+            alleles = list(SeqIO.parse(filename, 'fasta'))
+            logger.info("Read %d alleles from %s" % (len(alleles), filename))
+            gene_name = alleles[0].id.split('_')[0]
+            allele_dict[gene_name] = (filename, len(alleles))
+        except:
+            logger.error("Could not process FASTA file %s (exiting)" % 
+                         filename)
+            logger.error(last_exception())
+            sys.exit(1)
+    return allele_dict
+
+
+# Process genome sequences from the input directory
+def load_genomes():
+    """ Identify the genome FASTA sequences, and associate with a filename
+    """
+    # Keep data in a dictionary
+    genomes = {}
+    # Get the list of FASTA files to process
+    try:
+        fastalist = get_input_files(args.genomedir, 
+                                    '.fasta', '.fas', '.fna', '.fa')
+    except:
+        logger.error("Could not identify FASTA files in directory %s " %
+                     args.indirname + "(exiting)")
+        logger.error(last_exception())
+        sys.exit(1)
+    # Loop over genome sequences and associate an identifier with a filename
+    for filename in fastalist:
+        try:
+            genome = list(SeqIO.parse(filename, 'fasta'))
+            logger.info("Read %d sequences from %s" % (len(genome), filename))
+            isolate = genome[0].id.replace("|", "_")
+            genomes[isolate] = filename
+        except:
+            logger.error("Could not process genome file %s (exiting)" % 
+                         filename)
+            logger.error(last_exception())
+            sys.exit(1)
+    return genomes
+
+
+# Run pairwise BLASTN in all combinations of allele sequence and genome
+# sequence input
+def run_blast(alleles, genomes):
+    """ We pass a series of BLAST-2-sequences commands to multiprocessing,
+        writing to the prescribed output directory.
+    """
+    logger.info("Running BLASTN-2-sequences to identify alleles in each " +
+                "genome")
+    cmdlines = []
+    for allele, data in alleles.items():
+        for isolate, filename in genomes.items():
+            cmdlines.append(make_blast_cmd(allele, isolate, data[0], 
+                                           filename))
+    logger.info("Generated %d command-lines" % len(cmdlines))
+    multiprocessing_run(cmdlines)
+            
+
+# Construct a BLASTN-2-sequences command line (default settings)
+def make_blast_cmd(qid, sid, qfilename, sfilename):
+    """ Construct a default BLASTN-2-sequences command line from the passed
+        query identifier and filename (qid, qfilename), and subject 
+        identifier and filename (sid, sfilename).
+    """
+    outfile = os.path.join(args.outdirname, "%s_vs_%s.tab" %
+                           (qid, sid))
+    cmdline = "%s -query %s -subject %s -out %s" %\
+              (args.blast_exe, qfilename, sfilename, outfile)
+    # Custom format for output
+    cmdline += " -outfmt '6 qseqid sseqid pident qlen length gaps mismatch'"
+    return cmdline
+
+
+# Run a set of command lines using multiprocessing
+def multiprocessing_run(cmdlines):
+    """ Distributes the passed command-line jobs using multiprocessing.
+
+        - cmdlines is an iterable of command line strings
+    """
+    logger.info("Running %d jobs with multiprocessing" % len(cmdlines))
+    pool = multiprocessing.Pool()
+    completed = []
+    if args.verbose:
+        callback_fn = logger_callback
+    else:
+        callback_fn = completed.append
+    pool_outputs = [pool.apply_async(subprocess.call,
+                                     (str(cline), ),
+                                     {'stderr': subprocess.PIPE,
+                                      'shell': sys.platform != "win32"},
+                                     callback=callback_fn)
+                    for cline in cmdlines]
+    pool.close()        # Run jobs
+    pool.join()         # Collect output
+    logger.info("Multiprocessing jobs completed:\n%s" % completed)
+
+
+# Multiprocessing callback to logger
+def logger_callback(val):
+    """ Basic callback for multiprocessing just to log status of each job
+
+        - val is an integer returned by multiprocessing, describing the run
+             status
+    """
+    logger.info("Multiprocessing run completed with status: %s" % val)
+
+
+# Get a list of files with a particular (set of) extension(s) from the passed
+# directory
+def get_input_files(dir, *ext):
+    """ Returns a list of files in the input directory with the passed
+        extension
+
+        - dir is the location of the directory containing the input files
+
+        - *ext is a list of arguments describing permissible file extensions
+    """
+    filelist = [f for f in os.listdir(dir)
+                if os.path.splitext(f)[-1] in ext]
+    return [os.path.join(dir, f) for f in filelist]
+
+
+# Create output directory if it doesn't exist
+def make_outdir():
+    """ Make the output directory, if required.
+
+        This is a little involved.  If the output directory already exists,
+        we take the safe option by default, and stop with an error.  We can,
+        however, choose to force the program to go on, in which case we 
+        clobber the existing directory.
+
+        DEFAULT: stop
+        FORCE: continue, and remove the existing output directory
+    """
+    if os.path.exists(args.outdirname):
+        if not args.force:
+            logger.error("Output directory %s would " % args.outdirname +
+                         "overwrite existing files (exiting)")
+            sys.exit(1)
+        else:
+            logger.info("Removing directory %s and everything below it" %
+                        args.outdirname)
+            shutil.rmtree(args.outdirname)
+    logger.info("Creating directory %s" % args.outdirname)
+    try:
+        os.makedirs(args.outdirname)   # We make the directory recursively
+    except OSError:
+        logger.error(last_exception)
+        sys.exit(1)
 
 
 if __name__ == '__main__':
 
     # Parse command-line
     # options are all options - no arguments
-    options, args = parse_cmdline(sys.argv)
+    args = parse_cmdline(sys.argv)
 
     # We set up logging, and modify loglevel according to whether we need
     # verbosity or not
@@ -150,35 +340,58 @@ if __name__ == '__main__':
     err_handler = logging.StreamHandler(sys.stderr)
     err_formatter = logging.Formatter('%(levelname)s: %(message)s')
     err_handler.setFormatter(err_formatter)
-    if options.logfile is not None:
+    if args.logfile is not None:
         try:
-            logstream = open(options.logfile, 'w')
+            logstream = open(args.logfile, 'w')
             err_handler_file = logging.StreamHandler(logstream)
             err_handler_file.setFormatter(err_formatter)
             err_handler_file.setLevel(logging.INFO)
             logger.addHandler(err_handler_file)
         except:
             logger.error("Could not open %s for logging" %
-                         options.logfile)
+                         args.logfile)
             sys.exit(1)
-    if options.verbose:
+    if args.verbose:
         err_handler.setLevel(logging.INFO)
     else:
         err_handler.setLevel(logging.WARNING)
     logger.addHandler(err_handler)
-    logger.info('# calculate_ani.py logfile')
+    logger.info('# run_MLST.py logfile')
     logger.info('# Run: %s' % time.asctime())
 
     # Report arguments, if verbose
-    logger.info(options)
     logger.info(args)
 
-    # Have we got an input directory and profile? If not, exit.
-    if options.indirname is None:
+    # Have we got an input/output directory and profile? If not, exit.
+    if args.indirname is None:
         logger.error("No input directory name (exiting)")
         sys.exit(1)
-    logger.info("Input directory: %s" % options.indirname)
-    if options.profile is None:
+    logger.info("Input directory: %s" % args.indirname)
+
+    if args.outdirname is None:
+        logger.error("No output directory name (exiting)")
+        sys.exit(1)
+    logger.info("Output directory: %s" % args.outdirname)
+
+    if args.profile is None:
         logger.error("No MLST profile (exiting)")
         sys.exit(1)
-    logger.info("MLST profile: %s" % options.indirname)
+    logger.info("MLST profile: %s" % args.indirname)
+
+    # Process the allele sequences
+    alleles = load_alleles()
+    logger.info("Found sequences for %d MLST genes:" % len(alleles))
+    for k, v in alleles.items():
+        logger.info("%s: %s %d alleles" % (k, os.path.split(v[0])[-1], v[1]))
+
+    # Process genome sequences
+    genomes = load_genomes()
+    logger.info("Found sequences for %d genomes:" % len(genomes))
+    for k, v in genomes.items():
+        logger.info("%s: %s" % (k, os.path.split(v)[-1]))
+
+    # Make the output directory (if needed)
+    make_outdir()
+
+    # BLASTN allele sequences against the input genome
+    blastoutfile = run_blast(alleles, genomes)
