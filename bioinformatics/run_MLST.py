@@ -26,19 +26,24 @@
 # - Python 2.6+ (for multiprocessing)
 # - Pandas
 #
-# USAGE: run_MLST.py [-h] [-o OUTFILENAME] [-i INDIRNAME] [-p PROFILE] [-v]
-#                    [--blast_exe BLAST_EXE]
+# USAGE: run_MLST.py [-h] [-o OUTDIRNAME] [-i INDIRNAME] [-g GENOMEDIR]
+#                   [-p PROFILE] [-l LOGFILE] [-v] [-f] [--blast_exe BLAST_EXE]
 #
 # optional arguments:
 #   -h, --help            show this help message and exit
-#   -o OUTFILENAME, --outfile OUTFILENAME
-#                         Output MLST classification table
+#   -o OUTDIRNAME, --outdir OUTDIRNAME
+#                         Output MLST classification data directory
 #   -i INDIRNAME, --indirname INDIRNAME
 #                         Directory containing MLST allele sequence files
+#   -g GENOMEDIR, --genomedir GENOMEDIR
+#                         Directory containing genome sequence files
 #   -p PROFILE, --profile PROFILE
 #                         Tab-separated plain text table describing MLST
 #                         classification scheme.
+#   -l LOGFILE, --logfile LOGFILE
+#                         Logfile location
 #   -v, --verbose         Give verbose output
+#   -f, --force           Force overwriting of output directory
 #   --blast_exe BLAST_EXE
 #                         Path to BLASTN+ executable
 #
