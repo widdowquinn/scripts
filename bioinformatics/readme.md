@@ -11,6 +11,7 @@ The current set of scripts includes:
 * [`find_asm_snps.py`](#find_asm_snps)
 * [`get_NCBI_cds_from_protein.py`](#get_NCBI_cds_from_protein): Given input of protein sequences with suitably-formatted identifiers, retrieves the corresponding coding sequence from NCBI, using Entrez.
 * [`restrict_long_contigs.py`](#restrict_long_contigs): From a directory of FASTA files, generates a new directory of corresponding FASTA files where all sequences shorter than a specified length have been removed.
+* [`run_MLST.py`](#run_mlst): carries out MLST analysis on input sequences, based on [PubMLST](http://pubmlst.org) data.
 * [`run_signalp.py`](#run_signalp): splits large files and parallelises for input to `SignalP`.
 * [`run_tmhmm.py`](#run_tmhmm): splits large files and parallelises for input to `TMHMM`.
 
@@ -230,6 +231,72 @@ test_contigs_out/contigs_2_restricted.fa:24
 #### Dependencies
 
 * **Biopython** <http://www.biopython.org>
+
+### <a name="run_mlst">`run_MLST.py`</a>
+
+This script takes a PubMLST (http://pubmlst.org) profile table, and the corresponding MLST sequences in FASTA format, to apply the protocol described in:
+
+* Larsen MV, Cosentino S, Rasmussen S, Friis C, Hasman H, et al. (2012) Multilocus Sequence Typing of Total Genome Sequenced Bacteria. *J Clin Microbiol* **50**: 1355-1361. [doi:10.1128/JCM.06094-11](http://dx.doi.org/10.1128/JCM.06094-11)
+
+in order to assign sequence types to a set of input sequences.
+
+For any large-scale, persistent analysis, you're probably better off usingBIGSdb, or a Galaxy MLST workflow. See, for example:
+
+* Jolley KA, Maiden MCJ (2010) BIGSdb: Scalable analysis of bacterial genome variation at the population level. BMC Bioinformatics 11: 595. [doi:10.1186/1471-2105-11-595](http://dx.doi.org/10.1186/1471-2105-11-595).
+* [http://bit.ly/MuT9fe](http://bit.ly/MuT9fe) A presentation from GCC2011 describing an MLST workflow in Galaxy. I've not yet been able to find it in the Galaxy toolshed at [http://toolshed.g2.bx.psu.edu/](http://toolshed.g2.bx.psu.edu/)
+
+But, if you have a one-shot, one-time use this script may be quicker to run than configuring the Apache and PostgreSQL infrastructure used by BIGSdb, or installing a local Galaxy instance, and all the backend that requires.
+
+#### Usage
+
+```
+run_MLST.py [-h] [-o OUTDIRNAME] [-i INDIRNAME] [-g GENOMEDIR]
+                   [-p PROFILE] [-l LOGFILE] [-v] [-f] [--blast_exe BLAST_EXE]
+                   [--formats FORMATS]
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -o OUTDIRNAME, --outdir OUTDIRNAME
+                        Output MLST classification data directory
+  -i INDIRNAME, --indirname INDIRNAME
+                        Directory containing MLST allele sequence files
+  -g GENOMEDIR, --genomedir GENOMEDIR
+                        Directory containing genome sequence files
+  -p PROFILE, --profile PROFILE
+                        Tab-separated plain text table describing MLST
+                        classification scheme.
+  -l LOGFILE, --logfile LOGFILE
+                        Logfile location
+  -v, --verbose         Give verbose output
+  -f, --force           Force overwriting of output directory
+  --blast_exe BLAST_EXE
+                        Path to BLASTN+ executable
+  --formats FORMATS     Comma-separated list of output formats
+```
+
+The script can be run on test (*Bordetella*) data, as downloaded from [http://pubmlst.org/bordetella/](http://pubmlst.org/bordetella/) and [ftp://ftp.ncbi.nih.gov/genomes/Bacteria/](ftp://ftp.ncbi.nih.gov/genomes/Bacteria/) and provided in the `test_MLST` directory:
+
+```
+$ time ./run_MLST.py -i test_MLST/alleles -g test_MLST/chromosomes/ -p test_MLST/Bordetella_profiles.tab -o test_MLST/MLST_output -f
+                              pepA pgm icd tyrB glyA fumC adk  ST
+gi_33591275_ref_NC_002929.2_     1   1   1    1    1    1   1   1
+gi_384202563_ref_NC_017223.1_    1   1   1    1    1    1   1   1
+gi_33594723_ref_NC_002928.3_     2   5   2    2    2    2   2  19
+gi_412337338_ref_NC_019382.1_    3   2   1    1    3    3   5  27
+gi_187476514_ref_NC_010645.1_   12  15  15    8   16    8   9  76
+
+real	0m3.283s
+user	0m8.314s
+sys	0m1.179s
+```
+
+#### Dependencies
+
+* **Biopython**: [http://www.biopython.org](http://www.biopython.org)
+* **Python 2.6+** (for multiprocessing): [http://python.org](http://python.org)
+* **Pandas**: [http://pandas.pydata.org/](http://pandas.pydata.org/)
+* **OpenPyXL** (for Excel output): [http://pythonhosted.org/openpyxl/](http://pythonhosted.org/openpyxl/) This may also require libxml2 and lxml if not present on your system
+
 
 ### <a name="run_signalp">`run_signalp.py`</a>
 
