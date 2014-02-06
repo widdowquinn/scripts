@@ -551,4 +551,4 @@ if __name__ == '__main__':
                                               "MLST.%s" % ext))
 
     # Write the MLST table to STDOUT
-    sys.stdout.write(str(df))
+    sys.stdout.write(str(df) + '\n')
