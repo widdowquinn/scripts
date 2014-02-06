@@ -3,28 +3,41 @@
 # run_MLST.py
 #
 # This script takes a PubMLST (http://pubmlst.org) profile table, and the
-# corresponding MLST sequences in FASTA format, and uses the protocol described
+# corresponding MLST sequences in FASTA format, to apply the protocol described
 # in:
 #
 # - Larsen MV, Cosentino S, Rasmussen S, Friis C, Hasman H, et al. (2012)
 #   Multilocus Sequence Typing of Total Genome Sequenced Bacteria. J Clin
 #   Microbiol 50: 1355-1361. doi:10.1128/JCM.06094-11
 #
+# in order to assign sequence types to a set of input sequences.
+#
 # For any large-scale, persistent analysis, you're probably better off using
-# BIGSdb:
+# BIGSdb, or a Galaxy MLST workflow. See, for example:
 #
 # - Jolley KA, Maiden MCJ (2010) BIGSdb: Scalable analysis of bacterial
 #   genome variation at the population level. BMC Bioinformatics 11: 595.
 #   doi:10.1186/1471-2105-11-595.
 #
-# But if you have a one-shot, one-time use, this script may well be quicker to
-# run than configuring the Apache and PostgreSQL infrastructure used by BIGSdb.
+# - http://bit.ly/MuT9fe A presentation from GCC2011 describing an MLST
+#   workflow in Galaxy. I've not yet been able to find it in the Galaxy
+#   toolshed at http://toolshed.g2.bx.psu.edu/
+#
+# But, if you have a one-shot, one-time use this script may be quicker to
+# run than configuring the Apache and PostgreSQL infrastructure used by 
+# BIGSdb, or installing a local Galaxy instance, and all the backend that
+# requires.
+#
+# The script produces CSV and Excel output files by default, and also writes
+# MLST results to STDOUT.
 #
 # DEPENDENCIES:
 #
-# - Biopython
-# - Python 2.6+ (for multiprocessing)
-# - Pandas
+# - Biopython: http://www.biopython.org
+# - Python 2.6+ (for multiprocessing) http://python.org
+# - Pandas: http://pandas.pydata.org/
+# - OpenPyXL (for Excel output): http://pythonhosted.org/openpyxl/
+#     This may also require libxml2 and lxml if not present on your system
 #
 # USAGE: run_MLST.py [-h] [-o OUTDIRNAME] [-i INDIRNAME] [-g GENOMEDIR]
 #                   [-p PROFILE] [-l LOGFILE] [-v] [-f] [--blast_exe BLAST_EXE]
@@ -46,6 +59,7 @@
 #   -f, --force           Force overwriting of output directory
 #   --blast_exe BLAST_EXE
 #                         Path to BLASTN+ executable
+#   --formats FORMATS     Comma-separated list of output formats
 #
 # METHOD:
 #
@@ -149,6 +163,9 @@ def parse_cmdline(args):
     parser.add_argument("--blast_exe", dest="blast_exe",
                         action="store", default="blastn",
                         help="Path to BLASTN+ executable")
+    parser.add_argument("--formats", dest="formats", type=str,
+                        action="store", default="csv,excel",
+                        help="Comma-separated list of output formats")
     return parser.parse_args()
 
 
@@ -260,8 +277,11 @@ def assign_alleles(filedict, df):
         percentage identity, as in Larsen et al. (2012).
     """
     for k, v in filedict.items():
-        best_allele = find_best_allele(v)
-        df.loc[k[0], k[1]] = best_allele
+        allele = find_best_allele(v)
+        if allele is not None:
+            df.loc[k[0], k[1]] = int(allele)
+        else:
+            df.loc[k[0], k[1]] = None
     return df
 
 
@@ -295,8 +315,55 @@ def find_best_allele(filename):
             logger.warning("Best LS: %s" % str(best_ls))
             logger.warning("Best %%ID: %s" % str(best_pident))
         return best_ls[-1]
-        
-                
+
+
+# Assign sequence type on the basis of allele profile
+def assign_sequence_type(dataframe):
+    """ Uses the allele data in the passed dataframe to assign a sequence 
+        type to each isolate, and returns the modified dataframe.
+    """
+    logger.info("Assigning sequence types to isolates.")
+    genes, profiles = process_profiles()
+    for index, row in dataframe.iterrows():
+        alleles = ','.join([str(row[gene]) for gene in genes])
+        logger.info("Isolate %s: alleles: %s" % (index, alleles))
+        try:
+            row['ST'] = int(profiles[alleles])
+            logger.info("Assigning ST: %s" % row['ST'])
+        except KeyError:
+            logger.warning("Genes - %s: profile %s not known!" %
+                           (genes, alleles))
+            row['ST'] = 'NEW'
+    # Return the isolates sorted by alleles (i.e. grouped by sequence type)
+    return dataframe.sort(list(genes))
+                           
+
+
+# Process the MLST profile file into a dictionary
+def process_profiles():
+    """ Parse the MLST profile data from file into a dictionary keyed by
+        a tuple of genes/integers representing the allele profile.
+    """
+    logger.info("Processing MLST profile data from %s" % args.profile)
+    with open(args.profile, 'r') as fh:
+        csvreader = csv.DictReader(fh, delimiter='\t')
+        profiles = {}
+        # We key each sequence type by a string of alleles. The alleles
+        # are placed in order of alphabetically-sorted gene name. Alleles
+        # are treated as strings, and joined by commas. This should provide
+        # a unique key for each sequence type
+        genes = None
+        for row in csvreader:
+            if genes is None:
+                genes = tuple([e for e in sorted(row.keys()) if
+                               e not in ('ST', 'clonal_complex')])
+            alleles = ','.join([str(row[gene]) for gene in genes])
+            profiles[alleles] = row['ST']
+        logger.info("Sorted gene order from profile: %s" % str(genes))
+        for k, v in profiles.items():
+            logger.info("Alleles: %s -> ST = %s" % (k, v))
+    return genes, profiles
+
 
 # Construct a BLASTN-2-sequences command line (default settings)
 def make_blast_cmd(qid, sid, qfilename, sfilename, outfilename):
@@ -441,7 +508,7 @@ if __name__ == '__main__':
     if args.profile is None:
         logger.error("No MLST profile (exiting)")
         sys.exit(1)
-    logger.info("MLST profile: %s" % args.indirname)
+    logger.info("MLST profile: %s" % args.profile)
 
     # Process the allele sequences
     alleles = load_alleles()
@@ -463,8 +530,28 @@ if __name__ == '__main__':
 
     # Create a dataframe with genomes as rows, and alleles as columns.
     # We'll populate these as we process our BLAST output
-    df = pd.DataFrame(index=genomes.keys(), columns=alleles.keys())
+    df = pd.DataFrame(index=genomes.keys(), columns=alleles.keys() + ['ST'])
 
     # Assign alleles to isolates
     df = assign_alleles(blastoutfiles, df)
-    print df
+
+    # Compare allele profiles to the provided MLST profile, and assign ST
+    df = assign_sequence_type(df)
+
+    # Write the MLST profiles and STs of each isolate to file in the output
+    # directory
+    formats = [f.lower() for f in args.formats.split(',')]
+    extensions = {'excel': 'xlsx'}
+    for f in formats:
+        if f in extensions.keys():
+            ext = extensions[f]
+        else:
+            ext = f
+        getattr(df, "to_%s" % f)(os.path.join(args.outdirname, 
+                                              "MLST.%s" % ext))
+
+    # Write the MLST table to STDOUT
+    sys.stdout.write(str(df))
+    
+    
+    
