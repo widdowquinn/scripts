@@ -24,7 +24,7 @@
 #   toolshed at http://toolshed.g2.bx.psu.edu/
 #
 # But, if you have a one-shot, one-time use this script may be quicker to
-# run than configuring the Apache and PostgreSQL infrastructure used by 
+# run than configuring the Apache and PostgreSQL infrastructure used by
 # BIGSdb, or installing a local Galaxy instance, and all the backend that
 # requires.
 #
@@ -130,6 +130,7 @@ from Bio import SeqIO
 
 import pandas as pd
 
+
 #================
 # FUNCTIONS
 
@@ -183,7 +184,7 @@ def load_alleles():
     """ Identify the FASTA files in the input directory, and the genes/
         allele numbers involved.
 
-        Return a dictionary of (filename, number of alleles) tuples, 
+        Return a dictionary of (filename, number of alleles) tuples,
         keyed by gene name.
     """
     # We keep all our data in a dictionary:
@@ -191,7 +192,7 @@ def load_alleles():
     # Get the list of FASTA files to process
     logger.info("Processing input directory %s" % args.indirname)
     try:
-        fastalist = get_input_files(args.indirname, 
+        fastalist = get_input_files(args.indirname,
                                     '.fasta', '.fas', '.fna', '.fa')
     except:
         logger.error("Could not identify FASTA files in directory %s " %
@@ -209,7 +210,7 @@ def load_alleles():
             gene_name = alleles[0].id.split('_')[0]
             allele_dict[gene_name] = (filename, len(alleles))
         except:
-            logger.error("Could not process FASTA file %s (exiting)" % 
+            logger.error("Could not process FASTA file %s (exiting)" %
                          filename)
             logger.error(last_exception())
             sys.exit(1)
@@ -224,7 +225,7 @@ def load_genomes():
     genomes = {}
     # Get the list of FASTA files to process
     try:
-        fastalist = get_input_files(args.genomedir, 
+        fastalist = get_input_files(args.genomedir,
                                     '.fasta', '.fas', '.fna', '.fa')
     except:
         logger.error("Could not identify FASTA files in directory %s " %
@@ -239,7 +240,7 @@ def load_genomes():
             isolate = genome[0].id.replace("|", "_")
             genomes[isolate] = filename
         except:
-            logger.error("Could not process genome file %s (exiting)" % 
+            logger.error("Could not process genome file %s (exiting)" %
                          filename)
             logger.error(last_exception())
             sys.exit(1)
@@ -260,13 +261,13 @@ def run_blast(alleles, genomes):
         for isolate, filename in genomes.items():
             outfilename = os.path.join(args.outdirname, "%s_vs_%s.tab" %
                                        (allele, isolate))
-            cmdlines.append(make_blast_cmd(allele, isolate, data[0], 
+            cmdlines.append(make_blast_cmd(allele, isolate, data[0],
                                            filename, outfilename))
             blastoutfiles[(isolate, allele)] = outfilename
     logger.info("Generated %d command-lines" % len(cmdlines))
     multiprocessing_run(cmdlines)
     return blastoutfiles
-            
+
 
 # Assign alleles to isolates
 def assign_alleles(filedict, df):
@@ -293,7 +294,7 @@ def find_best_allele(filename):
     with open(filename, 'r') as fh:
         csvreader = csv.DictReader(fh, delimiter='\t',
                                    fieldnames=['qseqid', 'sseqid', 'pident',
-                                               'qlen', 'length', 'gaps', 
+                                               'qlen', 'length', 'gaps',
                                                'mismatch'])
         # Hold 'best' allele by LS and percentage identity
         best_ls = (None, None, None)
@@ -308,7 +309,7 @@ def find_best_allele(filename):
             if best_ls is None:
                 best_ls = (ls, pident, allele)
             elif ls <= best_ls and pident > best_ls[1]:
-                best_ls = (ls, pident, allele)                
+                best_ls = (ls, pident, allele)
         if best_ls[-1] != best_pident[-1]:
             logger.warning("%s: Same allele not identified by LS and %%ID" %
                            filename)
@@ -319,7 +320,7 @@ def find_best_allele(filename):
 
 # Assign sequence type on the basis of allele profile
 def assign_sequence_type(dataframe):
-    """ Uses the allele data in the passed dataframe to assign a sequence 
+    """ Uses the allele data in the passed dataframe to assign a sequence
         type to each isolate, and returns the modified dataframe.
     """
     logger.info("Assigning sequence types to isolates.")
@@ -336,7 +337,6 @@ def assign_sequence_type(dataframe):
             row['ST'] = 'NEW'
     # Return the isolates sorted by alleles (i.e. grouped by sequence type)
     return dataframe.sort(list(genes))
-                           
 
 
 # Process the MLST profile file into a dictionary
@@ -368,8 +368,8 @@ def process_profiles():
 # Construct a BLASTN-2-sequences command line (default settings)
 def make_blast_cmd(qid, sid, qfilename, sfilename, outfilename):
     """ Construct a default BLASTN-2-sequences command line from the passed
-        query identifier and filename (qid, qfilename), and subject 
-        identifier and filename (sid, sfilename), placing the result in 
+        query identifier and filename (qid, qfilename), and subject
+        identifier and filename (sid, sfilename), placing the result in
         the file outfilename.
     """
     cmdline = "%s -query %s -subject %s -out %s" %\
@@ -434,7 +434,7 @@ def make_outdir():
 
         This is a little involved.  If the output directory already exists,
         we take the safe option by default, and stop with an error.  We can,
-        however, choose to force the program to go on, in which case we 
+        however, choose to force the program to go on, in which case we
         clobber the existing directory.
 
         DEFAULT: stop
@@ -547,11 +547,8 @@ if __name__ == '__main__':
             ext = extensions[f]
         else:
             ext = f
-        getattr(df, "to_%s" % f)(os.path.join(args.outdirname, 
+        getattr(df, "to_%s" % f)(os.path.join(args.outdirname,
                                               "MLST.%s" % ext))
 
     # Write the MLST table to STDOUT
     sys.stdout.write(str(df))
-    
-    
-    
