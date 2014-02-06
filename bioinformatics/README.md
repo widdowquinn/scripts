@@ -240,7 +240,7 @@ This script takes a PubMLST (http://pubmlst.org) profile table, and the correspo
 
 in order to assign sequence types to a set of input sequences.
 
-For any large-scale, persistent analysis, you're probably better off usingBIGSdb, or a Galaxy MLST workflow. See, for example:
+For any large-scale, persistent analysis, you're probably better off using BIGSdb, or a Galaxy MLST workflow. See, for example:
 
 * Jolley KA, Maiden MCJ (2010) BIGSdb: Scalable analysis of bacterial genome variation at the population level. BMC Bioinformatics 11: 595. [doi:10.1186/1471-2105-11-595](http://dx.doi.org/10.1186/1471-2105-11-595).
 * [http://bit.ly/MuT9fe](http://bit.ly/MuT9fe) A presentation from GCC2011 describing an MLST workflow in Galaxy. I've not yet been able to find it in the Galaxy toolshed at [http://toolshed.g2.bx.psu.edu/](http://toolshed.g2.bx.psu.edu/)
