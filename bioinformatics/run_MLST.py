@@ -165,7 +165,7 @@ def parse_cmdline(args):
                         action="store", default="blastn",
                         help="Path to BLASTN+ executable")
     parser.add_argument("--formats", dest="formats", type=str,
-                        action="store", default="csv,excel",
+                        action="store", default="csv,tab",
                         help="Comma-separated list of output formats")
     return parser.parse_args()
 
@@ -541,14 +541,20 @@ if __name__ == '__main__':
     # Write the MLST profiles and STs of each isolate to file in the output
     # directory
     formats = [f.lower() for f in args.formats.split(',')]
-    extensions = {'excel': 'xlsx'}
+    extensions = {'excel': 'xls'}
     for f in formats:
         if f in extensions.keys():
             ext = extensions[f]
         else:
             ext = f
-        getattr(df, "to_%s" % f)(os.path.join(args.outdirname,
-                                              "MLST.%s" % ext))
+        try:
+            getattr(df, "to_%s" % f)(os.path.join(args.outdirname,
+                                                  "MLST.%s" % ext))
+        except AttributeError:
+            if f == 'tab':
+                df.to_csv(os.path.join(args.outdirname,
+                                       "MLST.%s" % ext),
+                          sep='\t')
 
     # Write the MLST table to STDOUT
     sys.stdout.write(str(df) + '\n')
