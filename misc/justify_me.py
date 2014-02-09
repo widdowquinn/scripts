@@ -18,17 +18,21 @@
 # lines, parsing the content to calculate how much time was spent under each
 # heading. It reports some summary statistics.
 #
+# TODO: Turn output into JSON/graphical output
+#
 # (c) L.Pritchard 2014
 
 ###
 # IMPORTS
 
 from argparse import ArgumentParser
+from collections import defaultdict
 
 import logging
 import logging.handlers
 
 import os
+import re
 import sys
 import traceback
 
@@ -67,8 +71,95 @@ def process_labbooks():
 
     # Process each book, returning a dictionary of time spent, keyed by
     # section/subsection header
-    times = scrape_times(texfiles)
+    return [(os.path.split(texfile)[-1], scrape_time(texfile)) for 
+            texfile in texfiles]
+    
 
+# Report time spent by lab book day
+def report_by_day(times, outstream):
+    """ Report time spent by lab book day
+    """
+    for filename, tlist in sorted(times):
+        outstream.write("\n%s:\n" % filename)
+        total = 0
+        for topic, t in sorted(tlist):
+            if t:
+                outstream.write("\t%30s:\t%.2fh\n" % (topic, t/60.))
+                total += t
+        outstream.write("Total time spent: %.2fh\n" % (total/60.))
+
+
+# Report total time recorded in lab boo
+def report_total_time(times, outstream):
+    """ Report time spent across all lab books
+    """
+    totals = defaultdict(int)
+    days = 0
+    outstream.write("\nTotal time spent:\n")
+    for filename, tlist in sorted(times):
+        days += 1
+        for topic, t in sorted(tlist):
+            if t:
+                totals[topic] += t
+    total = 0
+    for topic, t in sorted(totals.items()):
+        outstream.write("\t%30s:\t%.2fh\n" % (topic, t/60.))
+        total += t
+    outstream.write("Total time spent: %.2fh\n" % (total/60.))
+    outstream.write("Total time spent per lab book: %.2fh\n" % 
+                    (total/60./days))
+
+
+# Takes an iterable of .tex files and processes \section and \subsection
+# headers to scrape times spent under the header
+def scrape_time(filename):
+    """ Loops over a .tex file and scrapes the
+        time spent (in format HHMM-HHMM) from each \section and \subsection
+        header.
+    """
+    section_re = r"((?<=\\section\{).*(?=\})|(?<=\\subsection\{).*(?=\}))"
+    logger.info("Scraping %s" % filename)
+    with open(filename, 'rU') as fh:
+        data = fh.read()
+        # Get \section{} and \subsection{} elements
+        matches = [m for m in re.findall(section_re, data) if
+                   len(m.strip()) and ':' in m]
+        # Process matches into subject, time values
+        times = [process_match(m) for m in matches]
+    return times
+
+
+# Convert the section/subsection headers into a topic name and time spent
+def process_match(match):
+    """ Takes a string regex match for a (sub)section header of format:
+        TOPIC: HHMM-HHMM; HHMM-HHMM...
+        and returns a tuple of (TOPIC, TIME SPENT IN MINUTES)
+    """
+    time_re = "[0-9]{4}-[0-9]{4}"
+    topic, times = match.split(':')
+    topic = topic.strip()
+    times = re.findall(time_re, times)
+    if not len(times):
+        return (topic, 0)
+    return (topic, calc_time(times))
+
+
+# Convert string times HHMM-HHMM into time spent
+def calc_time(times):
+    """ Takes a list of times in HHMM-HHMM format, and returns the difference
+        between the first and second times
+    """
+    cumt = 0
+    for t in times:
+        t1, t2 = t.split('-')
+        tm = (int(t2[2:]) - int(t1[2:])) % 60
+        th = 60 * ((int(t2[:2]) - int(t1[:2])) % 24)
+        if int(t2[2:]) < int(t1[2:]):
+            th -= 60
+        cumt +=  tm + th
+    return cumt
+
+    
 
 ###
 # SCRIPT
@@ -118,4 +209,10 @@ if __name__ == '__main__':
             sys.exit(1)
 
     # Process lab books
-    process_labbooks()
+    times = process_labbooks()
+
+    # Report time spent by day
+    report_by_day(times, outfhandle)
+
+    # Report total time spent
+    report_total_time(times, outfhandle)
