@@ -1,4 +1,4 @@
-#README.md - scripts/bioinformatics
+#README.md - scripts
 
 ## Overview
 This repository contains a set of scripts for various uses, organised along broad subject lines by subfolder. The code is not always exactly exemplary.
