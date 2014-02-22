@@ -101,10 +101,9 @@ def report_total_time(times, outstream):
         for topic, t in sorted(tlist):
             if t:
                 totals[topic] += t
-    total = 0
+    total = sum(totals.values())
     for topic, t in sorted(totals.items()):
-        outstream.write("\t%30s:\t%.2fh\n" % (topic, t/60.))
-        total += t
+        outstream.write("\t%30s:\t%.2fh\t(%.2f%%)\n" % (topic, t/60., 100.*t/total))
     outstream.write("Total time spent: %.2fh\n" % (total/60.))
     outstream.write("Total time spent per lab book: %.2fh\n" % 
                     (total/60./days))
@@ -136,7 +135,7 @@ def process_match(match):
         and returns a tuple of (TOPIC, TIME SPENT IN MINUTES)
     """
     time_re = "[0-9]{4}-[0-9]{4}"
-    topic, times = match.split(':')
+    topic, times = match.split(':', 1)
     topic = topic.strip()
     times = re.findall(time_re, times)
     if not len(times):
