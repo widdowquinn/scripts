@@ -10,6 +10,7 @@ The current set of scripts includes:
 * [`draw_gd_all_core.py`](#draw_gd_all_core): example script for use of GenomeDiagram. **NOTE: script will not run as provided without modification**
 * [`find_asm_snps.py`](#find_asm_snps)
 * [`get_NCBI_cds_from_protein.py`](#get_NCBI_cds_from_protein): Given input of protein sequences with suitably-formatted identifiers, retrieves the corresponding coding sequence from NCBI, using Entrez.
+* [`nucmer_to_crunch.py`](#nucmer_to_crunch): Convert the output of **MUMmer**'s `show-coords` package to `.crunch` format, for use with **ACT**.
 * [`restrict_long_contigs.py`](#restrict_long_contigs): From a directory of FASTA files, generates a new directory of corresponding FASTA files where all sequences shorter than a specified length have been removed.
 * [`run_MLST.py`](#run_mlst): carries out MLST analysis on input sequences, based on [PubMLST](http://pubmlst.org) data.
 * [`run_signalp.py`](#run_signalp): splits large files and parallelises for input to `SignalP`.
@@ -192,6 +193,53 @@ Options:
 
 * **Biopython** <http://www.biopython.org>
 
+### <a name="nucmer_to_crunch">`nucmer_to_crunch.py`</a>
+
+A short script that converts the tabular output of **MUMmer**'s `show-coords` script to `.crunch` format, so it can be visualised with Sanger's **ACT** application. This script uses the alignment length on the reference sequence as the score.
+
+#### Usage
+
+```
+Usage: nucmer_to_crunch.py [-h] [-o OUTFILENAME] [-i INFILENAME] [-v]
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -o OUTFILENAME, --outfile OUTFILENAME
+                        Output .crunch file
+  -i INFILENAME, --infile INFILENAME
+                        Input .coords file
+  -v, --verbose         Give verbose output
+```
+
+The script can be run on test data in the `test_nucmer` directory, as follows:
+
+```
+$ python nucmer_to_crunch.py -i test_nucmer/E_coli_nucmer.coords -o test_nucmer/E_coli_nucmer.crunch
+
+$ head test_nucmer/E_coli_nucmer.coords 
+NC_002695.fna NC_004431.fna
+NUCMER
+
+    [S1]     [E1]  |     [S2]     [E2]  |  [LEN 1]  [LEN 2]  |  [% IDY]  | [TAGS]
+=====================================================================================
+       1      327  |        1      309  |      327      309  |    93.88  | gi|15829254|ref|NC_002695.1|	gi|26245917|ref|NC_004431.1|
+     321     5577  |     1015     6270  |     5257     5256  |    96.98  | gi|15829254|ref|NC_002695.1|	gi|26245917|ref|NC_004431.1|
+    5680     9935  |     6281    10536  |     4256     4256  |    98.26  | gi|15829254|ref|NC_002695.1|	gi|26245917|ref|NC_004431.1|
+    9943    15838  |    10714    16606  |     5896     5893  |    97.83  | gi|15829254|ref|NC_002695.1|	gi|26245917|ref|NC_004431.1|
+   15911    18278  |    20606    22971  |     2368     2366  |    89.28  | gi|15829254|ref|NC_002695.1|	gi|26245917|ref|NC_004431.1|
+   
+$ head test_nucmer/E_coli_nucmer.crunch
+327 93.88 1 327 gi|15829254|ref|NC_002695.1| 1 309 gi|26245917|ref|NC_004431.1|
+5257 96.98 321 5577 gi|15829254|ref|NC_002695.1| 1015 6270 gi|26245917|ref|NC_004431.1|
+4256 98.26 5680 9935 gi|15829254|ref|NC_002695.1| 6281 10536 gi|26245917|ref|NC_004431.1|
+5896 97.83 9943 15838 gi|15829254|ref|NC_002695.1| 10714 16606 gi|26245917|ref|NC_004431.1|
+2368 89.28 15911 18278 gi|15829254|ref|NC_002695.1| 20606 22971 gi|26245917|ref|NC_004431.1|
+7407 95.87 25167 32573 gi|15829254|ref|NC_002695.1| 23024 30444 gi|26245917|ref|NC_004431.1|
+30534 97.32 32619 63152 gi|15829254|ref|NC_002695.1| 30872 61369 gi|26245917|ref|NC_004431.1|
+6138 96.84 64619 70756 gi|15829254|ref|NC_002695.1| 61489 67627 gi|26245917|ref|NC_004431.1|
+5325 95.36 70758 76082 gi|15829254|ref|NC_002695.1| 68341 73750 gi|26245917|ref|NC_004431.1|
+4403 95.26 76062 80464 gi|15829254|ref|NC_002695.1| 75557 79986 gi|26245917|ref|NC_004431.1|
+```
 
 ### <a name="restrict_long_contigs">`restrict_long_contigs.py`</a>
 
