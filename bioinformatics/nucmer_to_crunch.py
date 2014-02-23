@@ -16,6 +16,16 @@
 # to a .crunch file that can be used in Sanger's ACT comparative genomics
 # visualisation tool.
 #
+# The script acts equivalently to the one-liner:
+#
+# tail -n +6 in.coords | awk \
+# '{print $7" "$10" "$1" "$2" "$12" "$4" "$5" "$13}' > out.crunch
+#
+#
+# but has the advantage that you don't have to remember which columns go in
+# which order, and the Python boilerplate provides nicer logging and usage
+# information.
+#
 # Copyright (C) 2014 The James Hutton Institute
 # Author: Leighton Pritchard
 #

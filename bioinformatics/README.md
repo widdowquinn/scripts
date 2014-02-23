@@ -197,6 +197,14 @@ Options:
 
 A short script that converts the tabular output of **MUMmer**'s `show-coords` script to `.crunch` format, so it can be visualised with Sanger's **ACT** application. This script uses the alignment length on the reference sequence as the score.
 
+The script acts equivalently to the one-liner:
+
+```
+tail -n +6 in.coords | awk '{print $7" "$10" "$1" "$2" "$12" "$4" "$5" "$13}' > out.crunch
+```
+
+but has the advantage that you don't have to remember which columns go in which order, and the Python boilerplate provides nicer logging and usage information.
+
 #### Usage
 
 ```
