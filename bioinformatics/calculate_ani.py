@@ -280,7 +280,7 @@ def calculate_anim():
         The matrices are written to file in a plain text tab-separated format.
     """
     logger.info("Running ANIm method")
-    infiles = get_fasta_files()
+    infiles = get_fasta_files(options.indirname)
     org_lengths = get_org_lengths()
     pairwise_nucmer(infiles)
     lengths, sim_errors, perc_ids, perc_aln = process_delta(org_lengths)
@@ -344,7 +344,7 @@ def calculate_anib():
     write_table('sim_errors.tab', org_lengths.keys(), sim_errors,
                 "Similarity errors")
     write_table('perc_ids.tab', org_lengths.keys(), perc_ids,
-                "ANIm")
+                "ANIb")
     write_table('perc_aln.tab', org_lengths.keys(), perc_aln,
                 "Minimum % aligned nt")
 
@@ -451,7 +451,7 @@ def calc_org_tetra():
         nucleotide frequencies for that input sequence.
     """
     org_tetraz = {}
-    for fn in get_fasta_files():
+    for fn in get_fasta_files(options.indirname):
         org = os.path.splitext(os.path.split(fn)[-1])[0]
         logger.info("Calculating tetranucleotide frequencies for %s" % fn)
         # For the Teeling et al. method, the Z-scores require us to count
@@ -539,7 +539,7 @@ def fragment_input_files():
         uniquely as fragNNNNN.
     """
     logger.info("Fragmenting input FASTA files")
-    for fn in get_fasta_files():
+    for fn in get_fasta_files(options.indirname):
         logger.info("Processing %s" % fn)
         ostem = os.path.splitext(os.path.split(fn)[-1])[0]
         ofn = os.path.join(options.outdirname, ostem) + '.fasta'
@@ -566,7 +566,7 @@ def make_blast_dbs():
     global CUM_RETVALS
     logger.info("Making BLAST databases for fragment files")
     cmdlines = []
-    for fn in get_fasta_files():
+    for fn in get_fasta_files(options.indirname):
         cmdlines.append(make_makeblastdb_cmd(fn))
     logger.info("BLAST makeblastdb command lines:\n\t%s" %
                 '\n\t'.join(cmdlines))
@@ -578,10 +578,10 @@ def make_blast_dbs():
 
 
 # Get the list of FASTA files from the input directory
-def get_fasta_files():
+def get_fasta_files(dirname=None):
     """ Return a list of FASTA files in the input directory
     """
-    infiles = get_input_files(options.indirname,  # '.fna')
+    infiles = get_input_files(dirname,  # '.fna')
                               '.fasta', '.fas', '.fa', '.fna')
     logger.info("Input files:\n\t%s" % '\n\t'.join(infiles))
     return infiles
@@ -600,7 +600,7 @@ def get_org_lengths():
     """
     logger.info("Processing input organism sequence lengths")
     tot_lengths = {}
-    for fn in get_fasta_files():
+    for fn in get_fasta_files(options.indirname):
         tot_lengths[os.path.splitext(os.path.split(fn)[-1])[0]] = \
             sum([len(s) for s in SeqIO.parse(fn, 'fasta')])
     return tot_lengths
@@ -797,7 +797,7 @@ def parse_blast(filename):
         qlen[qid] = int(line[6])
         qerr[qid] += int(line[3])
     for qid, ql in qlen.items():
-        if qalnlen[qid]/ql > 0.7 and qnumid[qid]/ql > 0.3:
+        if 1.*qalnlen[qid]/ql > 0.7 and 1.*qnumid[qid]/ql > 0.3:
             aln_length += int(qalnlen[qid])
             sim_errors += int(qerr[qid])
     return aln_length, sim_errors
