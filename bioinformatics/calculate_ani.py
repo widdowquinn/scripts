@@ -294,9 +294,9 @@ def calculate_anim():
     write_table('sim_errors.tab', org_lengths.keys(), sim_errors,
                 "Similarity errors")
     write_table('perc_ids.tab', org_lengths.keys(), perc_ids,
-                "ANIm")
+                "ANIm", "float")
     write_table('perc_aln.tab', org_lengths.keys(), perc_aln,
-                "Minimum % aligned nt")
+                "Minimum % aligned nt", "float")
 
 
 # METHOD: ANIb
@@ -344,9 +344,9 @@ def calculate_anib():
     write_table('sim_errors.tab', org_lengths.keys(), sim_errors,
                 "Similarity errors")
     write_table('perc_ids.tab', org_lengths.keys(), perc_ids,
-                "ANIb")
+                "ANIb", "float")
     write_table('perc_aln.tab', org_lengths.keys(), perc_aln,
-                "Minimum % aligned nt")
+                "Minimum % aligned nt", "float")
 
 
 # METHOD: TETRA
@@ -373,7 +373,7 @@ def calculate_tetra():
     tetra_z = calc_org_tetra()   # Calculate Z-scores for tetranucleotides
     write_tetraz('tetra_z_scores.tab', tetra_z)
     corr_z = calc_tetra_corr(tetra_z)  # Calculate Pearson correlation
-    write_table('tetra_corr.tab', tetra_z.keys(), corr_z, "TETRA")
+    write_table('tetra_corr.tab', tetra_z.keys(), corr_z, "TETRA", "float")
 
 
 # SUPPORT FUNCTIONS
@@ -608,7 +608,7 @@ def get_org_lengths():
 
 # Write a table of values to file, organised as a square matrix with row/col
 # headers, in tab-separated format
-def write_table(filename, org_names, values, comment=''):
+def write_table(filename, org_names, values, comment='', fmt=None):
     """ Writes a tab-separated plain text square matrix file, with row and
         column headers, describing the passed data.
 
@@ -645,7 +645,10 @@ def write_table(filename, org_names, values, comment=''):
                 val = values[(n1, n2)]
             except KeyError:  # This error is not thrown for a square matrix
                 val = values[(n2, n1)]
-            outrow.append(str(val))
+            if fmt == "float":
+                outrow.append("%.4f" % val)
+            else:
+                outrow.append(str(val))
         print >> fh, '\t'.join(outrow)
     logger.info("Wrote data to %s" % fname)
 
@@ -784,6 +787,7 @@ def parse_blast(filename):
                                    collections.defaultdict(float),
                                    collections.defaultdict(float),
                                    collections.defaultdict(float))
+    seen = set()  # IDs of queries that have been processed
     for line in [l.strip().split() for l in open(filename, 'rU').readlines()
                  if len(l) and not l.startswith('#')]:
         # We need to collate matches by query ID, to determine whether the
@@ -791,7 +795,14 @@ def parse_blast(filename):
         # Following Goris et al (2007) we only use matches that contribute to
         # a total match identity of at least 30% and a total match coverage
         # of at least 70% of either query or reference length
+        # As of BLASTN 2.2.29+, the max_target_seqs/num_alignments still
+        # will not restrict to the best hit. We rely on BLAST output giving
+        # the best hit for any query first in the table, and check whether we
+        # have seen it before. If not, we carry on processing the data.
         qid = line[0]
+        if qid in seen:
+            continue
+        seen.add(qid)
         qalnlen[qid] += int(line[2])
         qnumid[qid] += int(line[5])
         qlen[qid] = int(line[6])
@@ -935,11 +946,10 @@ def make_blast_cmd(f1, f2):
     blastdb = os.path.splitext(f2)[0]
     cmd = "%s -out %s.blast_tab -query %s -db %s " % \
         (options.blast_exe, prefix, f1, blastdb) + \
-        "-xdrop_gap_final 150 -penalty -1 -dust no " +\
+        "-xdrop_gap_final 150 -dust no -evalue 1e-15 " +\
         "-max_target_seqs 1 -outfmt '6 qseqid sseqid length mismatch " +\
         "pident nident qlen slen qstart qend sstart send positive " +\
-        "ppos gaps' " +\
-        "-gapopen 0 -gapextend 2"
+        "ppos gaps' -task blastn"
     return cmd
 
 
