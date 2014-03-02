@@ -15,6 +15,7 @@ The current set of scripts includes:
 * [`run_MLST.py`](#run_mlst): carries out MLST analysis on input sequences, based on [PubMLST](http://pubmlst.org) data.
 * [`run_signalp.py`](#run_signalp): splits large files and parallelises for input to `SignalP`.
 * [`run_tmhmm.py`](#run_tmhmm): splits large files and parallelises for input to `TMHMM`.
+* [`stitch_six_frame_stops.py`](#stitch_six_frame_stops): joins sequence files with a spacer that has start/stop codons in each reading frame.
 
 ## Script READMEs
 
@@ -392,6 +393,40 @@ run_tmhmm.py <FASTAfile> [-o|--outfilename <output file>]
 
 * **tmhmm** <http://www.cbs.dtu.dk/cgi-bin/nph-sw_request?tmhmm>
 * **Python 2.6+** <http://www.python.org> (2.6+ required for `multiprocessing`)
+
+
+### <a name="stitch_six_frame_stops">`stitch_six_frame_stops.py`</a>
+
+Takes an input (multiple) FASTA sequence file, and replaces all runs of N with the sequence NNNNNCATTCCATTCATTAATTAATTAATGAATGAATGNNNNN, which contains start and stop codons in all frames.  All the sequences in the input file are then stitched together with the same sequence.
+
+Overall, the effect is to replace all regions of base uncertainty with the insert sequence, forcing stops and starts for gene-calling, to avoid chimeras or frame-shift errors due to placement of Ns.
+
+This script is intended for use in assembly pipelines, where contigs are
+provided in the correct (or, at least, an acceptable) order.
+
+If no input or output files are specified, then STDIN/STDOUT are used.
+
+The script also produces a GFF file describing the resulting contig locations on the stitched assembly, which is useful for visualisation, e.g. with Sanger's Artemis tool, or JHI's Tablet program.
+
+#### Usage ####
+
+```
+Usage: stitch_six_frame_stops.py [options]
+
+Options:
+  -h, --help            show this help message and exit
+  -o OUTFILENAME, --outfile=OUTFILENAME
+                        Output filename
+  -i INFILENAME, --infile=INFILENAME
+                        Input filename
+  --id=SEQID            ID/Accession for the output stitched sequence
+  -v, --verbose         Give verbose output
+```
+
+#### Dependencies
+
+* **Biopython** <http://www.biopython.org>
+* **Python 2.6+** <http://www.python.org>
 
 
 ## Licensing
