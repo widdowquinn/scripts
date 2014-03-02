@@ -2,6 +2,18 @@
 #
 # stitch_six_frame_stops.py
 #
+# Usage: stitch_six_frame_stops.py [options]
+#
+# Options:
+#   -h, --help            show this help message and exit
+#   -o OUTFILENAME, --outfile=OUTFILENAME
+#                         Output filename
+#   -i INFILENAME, --infile=INFILENAME
+#                         Input filename
+#   --id=SEQID            ID/Accession for the output stitched sequence
+#   -v, --verbose         Give verbose output
+#
+#
 # Takes an input (multiple) FASTA sequence file, and replaces all runs of
 # N with the sequence NNNNNCATTCCATTCATTAATTAATTAATGAATGAATGNNNNN, which
 # contains start and stop codons in all frames.  All the sequences in the
@@ -14,10 +26,40 @@
 # This script is intended for use in assembly pipelines, where contigs are
 # provided in the correct (or, at least, an acceptable) order.
 #
+# If no input or output files are specified, then STDIN/STDOUT are used.
+#
 # Updated 21/7/11 to produce a GFF file describing contig locations on the
 # stitched assembly
 #
-# (C) Leighton Pritchard 2011
+# (c) The Scottish Crop Research Institute 2011
+# Author: Leighton Pritchard
+#
+# Contact:
+# leighton.pritchard@hutton.ac.uk
+#
+# Leighton Pritchard,
+# Information and Computing Sciences,
+# James Hutton Institute,
+# Errol Road,
+# Invergowrie,
+# Dundee,
+# DD6 9LH,
+# Scotland,
+# UK
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 
 ###
 # IMPORTS
@@ -38,6 +80,7 @@ import time
 
 separator = 'NNNNNCATTCCATTCATTAATTAATTAATGAATGAATGNNNNN'
 
+
 ###
 # FUNCTIONS
 
@@ -45,7 +88,7 @@ separator = 'NNNNNCATTCCATTCATTAATTAATTAATGAATGAATGNNNNN'
 def parse_cmdline(args):
     """ Parse command-line arguments
     """
-    usage = "usage: %prog [options] <organism_type> <infile>"
+    usage = "usage: %prog [options]"
     parser = OptionParser(usage)
     parser.add_option("-o", "--outfile", dest="outfilename",
                       action="store", default=None,
@@ -60,6 +103,7 @@ def parse_cmdline(args):
                       action="store_true", default=False,
                       help="Give verbose output")
     return parser.parse_args()
+
 
 # Replace runs of N in each sequence with the separator
 def stitch_ns(sequences):
@@ -77,12 +121,14 @@ def stitch_ns(sequences):
             continue
         new_seq, repcount = re.subn('[nN]{1,}', separator, seqdata)
         logger.info("Replaced %d N runs in %s" % (repcount, s.id))
-        new_seqrecord = SeqRecord(Seq(new_seq.upper()), id=s.id + "_N-replaced",
-                                       name=s.name + "_N-replaced",
-                                       description=s.description)
+        new_seqrecord = SeqRecord(Seq(new_seq.upper()), id=s.id +
+                                  "_N-replaced",
+                                  name=s.name + "_N-replaced",
+                                  description=s.description)
         logger.info("New SeqRecord created:\n%s" % new_seqrecord)
         new_sequences.append(new_seqrecord)
     return new_sequences
+
 
 # Stitch passed sequences together with the separator
 def stitch_seqs(sequences, seqid):
@@ -95,9 +141,10 @@ def stitch_seqs(sequences, seqid):
     new_desc = '+'.join([s.id for s in sequences])
     stitched_seq = SeqRecord(Seq(new_seq), id=new_id, name=new_name,
                              description=new_desc)
-    logger.info("Created stitched sequence (len:%d):\n%s" % \
+    logger.info("Created stitched sequence (len:%d):\n%s" %
                 (len(stitched_seq), stitched_seq))
     return stitched_seq
+
 
 # Generate GFF file corresponding to the stitched sequence
 def build_gff(sequences, seqid):
@@ -128,14 +175,13 @@ if __name__ == '__main__':
     # Parse command-line
     # options are options, arguments are the .sff files
     options, args = parse_cmdline(sys.argv)
-    
+
     # We set up logging, and modify loglevel according to whether we need
     # verbosity or not
     logger = logging.getLogger('stitch_six_frame_stops.py')
     logger.setLevel(logging.DEBUG)
     err_handler = logging.StreamHandler(sys.stderr)
-    err_formatter = \
-                  logging.Formatter('%(levelname)s: %(message)s')
+    err_formatter = logging.Formatter('%(levelname)s: %(message)s')
     err_handler.setFormatter(err_formatter)
     if options.verbose:
         err_handler.setLevel(logging.INFO)
@@ -182,7 +228,3 @@ if __name__ == '__main__':
     gffhandle = open(gff_filename, 'w')
     gffhandle.write(gff_data)
     gffhandle.close()
-    
-
-    
-
