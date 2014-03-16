@@ -6,9 +6,71 @@ This repository contains a set of scripts for a bunch of disparate purposes. The
 ## Scripts
 The current set of scripts includes:
 
+* [`rename_to_hash`](#rename_to_hash): renames passed files to theit MD5 hash
 * [`tabular_to_wikitable.py`](#tabular_to_wikitable): converts a plain text tab-separated table to a MediaWiki wikitable
 
 ## Script READMEs
+
+### <a name="rename_to_hash">`rename_to_hash`</a>
+
+This script takes a file or list of files as input, and renames them to their MD5 hash, preserving the file extension. This is useful in a limited set of circumstances, admittedly.  I use it for avoiding filename collisions, where the filename itself is unimportant.
+
+#### Usage
+
+```
+Usage: rename_to_hash [options] ARGS 
+Options:
+   -h, --help    Display this message.
+   -n            Dry-run; only show what would be done.
+```
+
+As an example of usage:
+
+```
+$ mkdir temp && cd temp && touch file.{a..e} && mkdir dir_{a..e} && touch f.{a..e}
+$ ls
+dir_a/  dir_c/  dir_e/  f.b     f.d     file.a  file.c  file.e
+dir_b/  dir_d/  f.a     f.c     f.e     file.b  file.d
+$ rename_to_hash -n *
+dir_a is not a regular file (skipping)
+dir_b is not a regular file (skipping)
+dir_c is not a regular file (skipping)
+dir_d is not a regular file (skipping)
+dir_e is not a regular file (skipping)
+mv -v f.a d41d8cd98f00b204e9800998ecf8427e.a
+mv -v f.b d41d8cd98f00b204e9800998ecf8427e.b
+mv -v f.c d41d8cd98f00b204e9800998ecf8427e.c
+mv -v f.d d41d8cd98f00b204e9800998ecf8427e.d
+mv -v f.e d41d8cd98f00b204e9800998ecf8427e.e
+mv -v file.a d41d8cd98f00b204e9800998ecf8427e.a
+mv -v file.b d41d8cd98f00b204e9800998ecf8427e.b
+mv -v file.c d41d8cd98f00b204e9800998ecf8427e.c
+mv -v file.d d41d8cd98f00b204e9800998ecf8427e.d
+mv -v file.e d41d8cd98f00b204e9800998ecf8427e.e
+$ rename_to_hash *
+dir_a is not a regular file (skipping)
+dir_b is not a regular file (skipping)
+dir_c is not a regular file (skipping)
+dir_d is not a regular file (skipping)
+dir_e is not a regular file (skipping)
+f.a -> d41d8cd98f00b204e9800998ecf8427e.a
+f.b -> d41d8cd98f00b204e9800998ecf8427e.b
+f.c -> d41d8cd98f00b204e9800998ecf8427e.c
+f.d -> d41d8cd98f00b204e9800998ecf8427e.d
+f.e -> d41d8cd98f00b204e9800998ecf8427e.e
+d41d8cd98f00b204e9800998ecf8427e.a already exists, skipping file.a
+d41d8cd98f00b204e9800998ecf8427e.b already exists, skipping file.b
+d41d8cd98f00b204e9800998ecf8427e.c already exists, skipping file.c
+d41d8cd98f00b204e9800998ecf8427e.d already exists, skipping file.d
+d41d8cd98f00b204e9800998ecf8427e.e already exists, skipping file.e
+$ ls
+d41d8cd98f00b204e9800998ecf8427e.a  dir_a/                              file.a
+d41d8cd98f00b204e9800998ecf8427e.b  dir_b/                              file.b
+d41d8cd98f00b204e9800998ecf8427e.c  dir_c/                              file.c
+d41d8cd98f00b204e9800998ecf8427e.d  dir_d/                              file.d
+d41d8cd98f00b204e9800998ecf8427e.e  dir_e/                              file.e
+```
+
 
 ### <a name="tabular_to_wikitable">`tabular_to_wikitable.py`</a>
 

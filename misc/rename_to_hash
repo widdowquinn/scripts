@@ -41,12 +41,18 @@ main() {
     do
 	if [ -f ${f} ]
 	then
-	    cmd="mv -v $f $(md5 $f | cut -d ' ' -f4).${f##*.}";
-	    if [ ${DRY_RUN} -eq 1 ]
+	    of=$(md5 $f | cut -d ' ' -f4).${f##*.}
+	    if [ -f ${of} ]
 	    then
-		echo ${cmd}
+		echo "${of} already exists, skipping ${f}" 2>&1
 	    else
-		eval ${cmd}
+		cmd="mv -v $f $of";
+		if [ ${DRY_RUN} -eq 1 ]
+		then
+		    echo ${cmd}
+		else
+		    eval ${cmd}
+		fi
 	    fi
 	else
 	    echo "${f} is not a regular file (skipping)" 2>&1
