@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+## Usage: rename_to_hash [options] ARG1
+##
+## Options:
+##   -h, --help    Display this message.
+##   -n            Dry-run; only show what would be done.
+##
+# rename_to_hash
+#
+# Takes as an argument a set of files to rename as <MD5hash>.extension 
+# (the extension is preserved).
+#
+# (c) L.Pritchard 2014
+
+DRY_RUN=0
+
+usage() {
+    echo "Usage: rename_to_hash [options] ARGS 
+Options:
+   -h, --help    Display this message.
+   -n            Dry-run; only show what would be done." 2>&1
+}
+
+main() {
+
+    while getopts "h?n" opt; do
+	case "$opt" in
+	h|\?)
+		usage
+		exit 0
+		;;
+        n)  DRY_RUN=1
+		;;
+	esac
+    done
+
+    shift $((OPTIND-1))
+
+    for f in $@
+    do
+	if [ -f ${f} ]
+	then
+	    cmd="mv -v $f $(md5 $f | cut -d ' ' -f4).${f##*.}";
+	    if [ ${DRY_RUN} -eq 1 ]
+	    then
+		echo ${cmd}
+	    else
+		eval ${cmd}
+	    fi
+	else
+	    echo "${f} is not a regular file (skipping)" 2>&1
+	fi
+    done
+}
+
+main $*
