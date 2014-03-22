@@ -6,10 +6,34 @@ This repository contains a set of scripts for a bunch of disparate purposes. The
 ## Scripts
 The current set of scripts includes:
 
+* [`excel_to_tab.scpt`](#excel_to_tab): converts an Excel workbook to a subdirectory of tab-separated plaintext files, one per worksheet
 * [`rename_to_hash`](#rename_to_hash): renames passed files to theit MD5 hash
 * [`tabular_to_wikitable.py`](#tabular_to_wikitable): converts a plain text tab-separated table to a MediaWiki wikitable
 
 ## Script READMEs
+
+### <a name="excel_to_tab">`excel_to_tab.scpt`</a>
+
+This script takes as input an Excel workbook containing one or more worksheets. It creates a new directory with the same name as the workbook, with the appended string `_extracted`. This directory contains a set of tab-separated plaintext files, one per worksheet. Each file has the same name as the corresponding worksheet, with the extension `.tab`.
+
+#### Installation
+
+This script is written in AppleScript, and is only expected to work on OSX.
+
+Place the `excel_to_tab.scpt` into your `~/Library/Scripts` directory (create this directory if it does not exist).
+
+Open AppleScript Editor (in `/Applications/Utilities`) and open the General Preferences. Check the `Show Script menu in menu bar` setting, and close AppleScript Editor. You should now see the script symbol in the top menu bar.
+
+![The location of the script symbol, second from right](images/excel_to_tab1.png?raw=True =200x)
+
+![The script menu, showing excel_to_tab](images/excel_to_tab2.png?raw=True =200x)
+
+#### Usage
+
+Click on the script symbol in the menu bar, and select the `excel_to_tab` option (it will be in the lower section). This will open a file selection dialog box. Select the appropriate Excel file, and click `Choose`. The script will generate the output directory in the same location as the Excel file.
+
+
+
 
 ### <a name="rename_to_hash">`rename_to_hash`</a>
 
