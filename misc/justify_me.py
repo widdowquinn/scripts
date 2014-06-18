@@ -86,26 +86,27 @@ def report_by_day(times, outstream):
             if t:
                 outstream.write("\t%30s:\t%.2fh\n" % (topic, t/60.))
                 total += t
-        outstream.write("Total time spent: %.2fh\n" % (total/60.))
+        outstream.write("Total time recorded: %.2fh\n" % (total/60.))
 
 
 # Report total time recorded in lab boo
 def report_total_time(times, outstream):
-    """ Report time spent across all lab books
+    """ Report time recorded across all lab books
     """
     totals = defaultdict(int)
     days = 0
-    outstream.write("\nTotal time spent:\n")
+    outstream.write("\nTotal time recorded:\n")
     for filename, tlist in sorted(times):
         days += 1
         for topic, t in sorted(tlist):
             if t:
-                totals[topic] += t
+                totals[topic.upper()] += t
     total = sum(totals.values())
     for topic, t in sorted(totals.items()):
-        outstream.write("\t%30s:\t%.2fh\t(%.2f%%)\n" % (topic, t/60., 100.*t/total))
-    outstream.write("Total time spent: %.2fh\n" % (total/60.))
-    outstream.write("Total time spent per lab book: %.2fh\n" % 
+        outstream.write("\t%30s:\t%.2fh\t(%.2f%%)\n" %
+                        (topic, t/60., 100.*t/total))
+    outstream.write("Total time recorded: %.2fh\n" % (total/60.))
+    outstream.write("Total time recorded per lab book: %.2fh\n" % 
                     (total/60./days))
 
 
