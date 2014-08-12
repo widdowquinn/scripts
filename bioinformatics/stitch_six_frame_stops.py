@@ -15,7 +15,7 @@
 #
 #
 # Takes an input (multiple) FASTA sequence file, and replaces all runs of
-# N with the sequence NNNNNCATTCCATTCATTAATTAATTAATGAATGAATGNNNNN, which
+# N with the sequence NNNNNCATCCATTCATTAATTAATTAATGAATGAATGNNNNN, which
 # contains start and stop codons in all frames.  All the sequences in the
 # input file are then stitched together with the same sequence.
 #
@@ -78,7 +78,7 @@ import re
 import sys
 import time
 
-separator = 'NNNNNCATTCCATTCATTAATTAATTAATGAATGAATGNNNNN'
+separator = 'NNNNNCATCCATTCATTAATTAATTAATGAATGAATGNNNNN'
 
 
 ###
