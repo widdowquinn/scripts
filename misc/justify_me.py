@@ -105,9 +105,10 @@ def report_total_time(times, outstream):
     for topic, t in sorted(totals.items()):
         outstream.write("\t%30s:\t%dh%dm\t%.2fh\t(%.2f%%)\n" %
                         (topic, (t-t%60)/60, t%60, t/60., 100.*t/total))
-    outstream.write("Total time recorded: %.2fh\n" % (total/60.))
-    outstream.write("Total time recorded per lab book: %.2fh\n" % 
-                    (total/60./days))
+    outstream.write("Total time recorded: %dh%dm\t%.2fh\n" %
+                    ((total-total%60)/60, total%60, total/60.))
+    outstream.write("Total time recorded per lab book: %dh%dm\t%.2fh\n" % 
+                    (((total-total%60)/60)/days, (total%60)/days, total/60./days))
 
 
 # Takes an iterable of .tex files and processes \section and \subsection
