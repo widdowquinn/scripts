@@ -103,8 +103,8 @@ def report_total_time(times, outstream):
                 totals[topic.upper()] += t
     total = sum(totals.values())
     for topic, t in sorted(totals.items()):
-        outstream.write("\t%30s:\t%.2fh\t(%.2f%%)\n" %
-                        (topic, t/60., 100.*t/total))
+        outstream.write("\t%30s:\t%dh%dm\t%.2fh\t(%.2f%%)\n" %
+                        (topic, (t-t%60)/60, t%60, t/60., 100.*t/total))
     outstream.write("Total time recorded: %.2fh\n" % (total/60.))
     outstream.write("Total time recorded per lab book: %.2fh\n" % 
                     (total/60./days))
@@ -117,7 +117,7 @@ def scrape_time(filename):
         time spent (in format HHMM-HHMM) from each \section and \subsection
         header.
     """
-    section_re = r"((?<=\\section\{).*(?=\})|(?<=\\subsection\{).*(?=\}))"
+    section_re = r"((?<=\\section\{).*(?=\}))"
     logger.info("Scraping %s" % filename)
     with open(filename, 'rU') as fh:
         data = fh.read()
