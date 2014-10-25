@@ -96,6 +96,9 @@ def parse_cmdline(args):
     parser.add_option("-i", "--infile", dest="infilename",
                       action="store", default=None,
                       help="Input filename")
+    parser.add_option("-s", "--short", dest="short",
+                      action="store_true", default=None,
+                      help="Use short description")
     parser.add_option("--id", dest="seqid",
                       action="store", default="stitched",
                       help="ID/Accession for the output stitched sequence")
@@ -138,7 +141,10 @@ def stitch_seqs(sequences, seqid):
     new_seq = separator.join([str(s.seq) for s in sequences])
     new_id = seqid
     new_name = seqid+"_stitched"
-    new_desc = '+'.join([s.id for s in sequences])
+    if not options.short:
+        new_desc = '+'.join([s.id for s in sequences])
+    else:
+        new_desc = new_name
     stitched_seq = SeqRecord(Seq(new_seq), id=new_id, name=new_name,
                              description=new_desc)
     logger.info("Created stitched sequence (len:%d):\n%s" %
