@@ -1,4 +1,4 @@
-#/usr/bin/env python
+#!/usr/bin/env python
 #
 # genbank_get_genomes_by_taxon.py
 #
@@ -25,30 +25,41 @@ from Bio import Entrez, SeqIO
 # Parse command-line
 def parse_cmdline(args):
     """Parse command-line arguments"""
-    parser = ArgumentParser(usage)
-    parser.add_option("-o", "--outdir", dest="outdirname",
-                      action="store", default=None,
-                      help="Output directory")
-    parser.add_option("-t", "--taxon", dest="taxon",
-                      action="store", default=None,
-                      help="NCBI taxonomy ID")
-    parser.add_option("-v", "--verbose", dest="verbose",
-                      action="store_true", default=False,
-                      help="Give verbose output")
-    parser.add_option("-f", "--force", dest="force",
-                      action="store_true", default=False,
-                      help="Force file overwriting")
+    parser = ArgumentParser(prog="genbacnk_get_genomes_by_taxon.py")
+    parser.add_argument("-o", "--outdir", dest="outdirname",
+                        action="store", default=None,
+                        help="Output directory")
+    parser.add_argument("-t", "--taxon", dest="taxon",
+                        action="store", default=None,
+                        help="NCBI taxonomy ID")
+    parser.add_argument("-v", "--verbose", dest="verbose",
+                        action="store_true", default=False,
+                        help="Give verbose output")
+    parser.add_argument("-f", "--force", dest="force",
+                        action="store_true", default=False,
+                        help="Force file overwriting")
     parser.add_argument("--noclobber", dest="noclobber",
                         action="store_true", default=False,
                         help="Don't nuke existing files")
-    parser.add_option("-l", "--logfile", dest="logfile",
-                      action="store", default=None,
-                      help="Logfile location")
-    parser.add_option("--format", dest="format",
-                      action="store", default="gbk,fasta",
-                      help="Output file format [gbk|fasta]")
+    parser.add_argument("-l", "--logfile", dest="logfile",
+                        action="store", default=None,
+                        help="Logfile location")
+    parser.add_argument("--format", dest="format",
+                        action="store", default="gbk,fasta",
+                        help="Output file format [gbk|fasta]")
+    parser.add_argument("--email", dest="email",
+                        action="store", default=None,
+                        help="Email associated with NCBI queries")
     return parser.parse_args()
 
+
+# Set contact email for NCBI
+def set_ncbi_email():
+    """Set contact email for NCBI."""
+    Entrez.email = args.email
+    logger.info("Set NCBI contact email to %s" % args.email)
+    Entrez.tool = "genbank_get_genomes_by_taxon.py"
+    
 
 # Create output directory if it doesn't exist
 def make_outdir():
@@ -68,11 +79,12 @@ def make_outdir():
                          "overwrite existing files (exiting)")
             sys.exit(1)
         else:
-            logger.info("Removing directory %s and everything below it" %
-                        args.outdirname)
+            logger.info("--force output directory use")
             if args.noclobber:
-                logger.warning("NOCLOBBER: not actually deleting directory")
+                logger.warning("--noclobber: existing output directory kept")
             else:
+                logger.info("Removing directory %s and everything below it" %
+                            args.outdirname)
                 shutil.rmtree(args.outdirname)
     logger.info("Creating directory %s" % args.outdirname)
     try:
@@ -85,6 +97,14 @@ def make_outdir():
         else:
             logger.error(last_exception)
             sys.exit(1)
+
+
+# Get taxonomy subtree members by root taxon ID from NCBI
+def get_subtree(taxon_uid):
+    """Returns the taxonomy UIDs of all members of the taxonomy subtree(s) with
+    root(s) indicated by passed taxon_uid.
+    """
+    
 
 
 # Run as script
@@ -121,7 +141,15 @@ if __name__ == '__main__':
     logger.addHandler(err_handler)
 
     # Report arguments, if verbose
+    logger.info("genbank_get_genomes_by_taxon.py: %s" % time.asctime())
+    logger.info("command-line: %s" % ' '.join(sys.argv))
     logger.info(args)
+
+    # Have we got an output directory? If not, exit.
+    if args.email is None:
+        logger.error("No email contact address provided (exiting)")
+        sys.exit(1)
+    set_ncbi_email()
 
     # Have we got an output directory? If not, exit.
     if args.outdirname is None:
