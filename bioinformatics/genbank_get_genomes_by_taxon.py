@@ -141,6 +141,7 @@ def get_asm_uids(taxon_uid):
     logger.info("Identified %d unique assemblies" % len(asm_ids))
     return asm_ids
 
+
 # Get contig UIDs for a specified assembly UID
 def get_contig_uids(asm_uid):
     """Returns a set of NCBI UIDs associated with the passed assembly.
@@ -156,6 +157,77 @@ def get_contig_uids(asm_uid):
     contig_uids = set([e['Id'] for e in contigs['Link']])
     logger.info("Identified %d contig UIDs" % len(contig_uids))
     return contig_uids
+
+
+# Write contigs for a single assembly out to file
+def write_contigs(asm_uid, contig_uids):
+    """Writes assembly contigs out to a single FASTA file in the script's
+    designated output directory.
+
+    FASTA records are returned, as GenBank and even GenBankWithParts format
+    records don't reliably give correct sequence in all cases.
+
+    The script returns two strings for each assembly, a 'class' and a 'label'
+    string - this is for use with, e.g. pyani.
+    """
+    logger.info("Collecting contig data for %s" % asm_uid)
+    # Assembly record - get binomial and strain names
+    asm_record = Entrez.read(Entrez.esummary(db='assembly', id=asm_uid,
+                                             rettype='text'))
+    asm_organism = asm_record['DocumentSummarySet']['DocumentSummary']\
+                   [0]['SpeciesName']
+    try:
+        asm_strain = asm_record['DocumentSummarySet']['DocumentSummary']\
+                     [0]['Biosource']['InfraspeciesList'][0]['Sub_value']
+    except:
+        asm_strain = ""
+    # Assembly UID (long form) for the output filename
+    gname = asm_record['DocumentSummarySet']['DocumentSummary']\
+            [0]['AssemblyAccession'].split('.')[0]
+    outfilename = "%s.fasta" % os.path.join(args.outdirname, gname)
+
+    # Create label and class strings
+    genus, species = asm_organism.split(' ', 1)
+    ginit = genus[0] + '.'
+    labeltxt = "%s\t%s %s %s" % (gname, ginit, species, asm_strain)
+    classtxt = "%s\t%s" % (gname, asm_organism)
+
+    # Get FASTA records for contigs
+    logger.info("Downloading FASTA records for assembly %s (%s)" %
+                (asm_uid, ' '.join([ginit, species, asm_strain])))
+    query_uids = ','.join(contig_uids)
+    tries, success = 0, False
+    while not success and tries < 20:
+        try:
+            tries += 1
+            records = list(SeqIO.parse(Entrez.efetch(db='nucleotide', 
+                                                     id=query_uids,
+                                                     rettype='fasta',
+                                                     retmode='text'), 'fasta'))
+            # Check only that correct number of records returned.
+            if len(records) == len(contig_uids):  
+                success = True
+            else:
+                logger.warning("FASTA download for assembly %s failed" %
+                               asm_uid)
+                logger.warning("try %d/20" % tries)
+            # Could also check expected assembly sequence length?
+            totlen = sum([len(r) for r in records])
+            logger.info("Downloaded genome size: %d" % totlen)
+        except:
+            logger.warning("FASTA download for assembly %s failed" % asm_uid)
+            logger.warning("try %d/20" % tries)            
+    if not success:
+        logger.error("Failed to download records for %s (exiting)" % asm_uid)
+        sys.exit(1)
+
+    # Write contigs to file
+    retval = SeqIO.write(records, outfilename, 'fasta')
+    logger.info("Wrote %d contigs to %s" % (retval, outfilename))
+
+    # Return labels for this genome
+    return classtxt, labeltxt
+
 
 # Run as script
 if __name__ == '__main__':
@@ -226,3 +298,22 @@ if __name__ == '__main__':
             contig_dict[asm_uid] = get_contig_uids(asm_uid)
     for asm_uid, contig_uids in contig_dict.items():
         logger.info("Assembly %s: %d contigs" % (asm_uid, len(contig_uids)))
+
+    # Write each recovered assembly's contig set to a file in the 
+    # specified output directory, and collect string labels to write in
+    # class and label files (e.g. for use with pyani).
+    classes, labels = [], []
+    for asm_uid, contig_uids in contig_dict.items():
+        classtxt, labeltxt = write_contigs(asm_uid, contig_uids)
+        classes.append(classtxt)
+        labels.append(labeltxt)
+
+    # Write class and label files
+    classfilename = os.path.join(args.outdirname, 'classes.txt')
+    labelfilename = os.path.join(args.outdirname, 'labels.txt')
+    logger.info("Writing classes file to %s" % classfilename)
+    with open(classfilename, 'w') as fh:
+        fh.write('\n'.join(classes))
+    logger.info("Writing labels file to %s" % labelfilename)
+    with open(labelfilename, 'w') as fh:
+        fh.write('\n'.join(labels))
