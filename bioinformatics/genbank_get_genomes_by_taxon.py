@@ -19,6 +19,7 @@ import time
 import traceback
 
 from argparse import ArgumentParser
+from collections import defaultdict
 
 from Bio import Entrez, SeqIO
 
@@ -99,13 +100,62 @@ def make_outdir():
             sys.exit(1)
 
 
-# Get taxonomy subtree members by root taxon ID from NCBI
-def get_subtree(taxon_uid):
-    """Returns the taxonomy UIDs of all members of the taxonomy subtree(s) with
-    root(s) indicated by passed taxon_uid.
-    """
-    
+# Get assembly UIDs for the root taxon
+def get_asm_uids(taxon_uid):
+    """Returns a set of NCBI UIDs associated with the passed taxon.
 
+    This query at NCBI returns all assemblies for the taxon subtree
+    rooted at the passed taxon_uid.
+    """
+    asm_ids = set()  # Holds unique assembly UIDs
+    query = "txid%s[Organism:exp]" % taxon_uid
+    logger.info("ESearch for %s" % query)
+    
+    # Perform initial search with usehistory
+    handle = Entrez.esearch(db="assembly", term=query, format="xml",
+                            usehistory="y")
+    record = Entrez.read(handle)
+    result_count = int(record['Count'])
+    logger.info("Entrez ESearch returns %d assembly IDs" % result_count)
+    
+    # Recover all child nodes
+    batch_size = 250
+    for start in range(0, result_count, batch_size):
+        tries, success = 0, False
+        while not success and tries < 20:
+            try:
+                batch_handle = Entrez.efetch(db="assembly", retmode="xml",
+                                             retstart=start,
+                                             retmax=batch_size,
+                                             webenv=record["WebEnv"],
+                                             query_key=record["QueryKey"])
+                batch_record = Entrez.read(batch_handle)
+                asm_ids = asm_ids.union(set(batch_record))
+                success = True
+            except:
+                tries += 1
+                logger.warning("Entrez batch query failed (#%d)" % tries)
+        if not success:
+            logger.error("Too many download attempt failures (exiting)")
+            sys.exit(1)
+    logger.info("Identified %d unique assemblies" % len(asm_ids))
+    return asm_ids
+
+# Get contig UIDs for a specified assembly UID
+def get_contig_uids(asm_uid):
+    """Returns a set of NCBI UIDs associated with the passed assembly.
+
+    The UIDs returns are for assembly_nuccore_insdc sequences - the 
+    assembly contigs."""
+    logger.info("Finding contig UIDs for assembly %s" % asm_uid)
+    contig_ids = set()  # Holds unique contig UIDs
+    links = Entrez.read(Entrez.elink(dbfrom="assembly", db="nucleotide",
+                                     retmode="gb", from_uid=asm_uid))
+    contigs = [l for l in links[0]['LinkSetDb'] \
+               if l['LinkName'] == 'assembly_nuccore_insdc'][0]
+    contig_uids = set([e['Id'] for e in contigs['Link']])
+    logger.info("Identified %d contig UIDs" % len(contig_uids))
+    return contig_uids
 
 # Run as script
 if __name__ == '__main__':
@@ -158,3 +208,21 @@ if __name__ == '__main__':
     make_outdir()
     logger.info("Output directory: %s" % args.outdirname)
 
+    # We might have more than one taxon in a comma-separated list
+    taxon_ids = args.taxon.split(',')
+    logger.info("Passed taxon IDs: %s" % ', '.join(taxon_ids))    
+
+    # Get all NCBI assemblies for each taxon UID
+    asm_dict = defaultdict(set)
+    for tid in taxon_ids:
+        asm_dict[tid] = get_asm_uids(tid)
+    for tid, asm_uids in asm_dict.items():
+        logger.info("Taxon %s: %d assemblies" % (tid, len(asm_uids)))
+
+    # Get links to the nucleotide database for each assembly UID
+    contig_dict = defaultdict(set)
+    for tid, asm_uids in asm_dict.items():
+        for asm_uid in asm_uids:
+            contig_dict[asm_uid] = get_contig_uids(asm_uid)
+    for asm_uid, contig_uids in contig_dict.items():
+        logger.info("Assembly %s: %d contigs" % (asm_uid, len(contig_uids)))
