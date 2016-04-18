@@ -21,6 +21,8 @@ The current set of scripts includes:
 
 ### <a name="calculate_ani">`calculate_ani.py`</a>
 
+***THIS SCRIPT IS DEPRECATED - PLEASE USE PYANI ([https://github.com/widdowquinn/pyani](https://github.com/widdowquinn/pyani)) INSTEAD***
+
 This script calculates Average Nucleotide Identity (ANI) according to one of a number of alternative methods described in, e.g.
 
 * Richter M, Rossello-Mora R (2009) Shifting the genomic gold standard for the prokaryotic species definition. Proc Natl Acad Sci USA 106: 19126-19131. doi:10.1073/pnas.0906412106. (ANI1020, ANIm, ANIb)

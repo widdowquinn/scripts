@@ -1071,6 +1071,11 @@ if __name__ == '__main__':
     logger.info(options)
     logger.info(args)
 
+    # Report that this script is deprecated
+    logger.warning("THIS SCRIPT IS DEPRECATED.")
+    logger.warning("PLEASE USE THE PYANI MODULE INSTEAD.")
+    logger.warning("https://github.com/widdowquinn/pyani")
+
     # Have we got an input and output directory? If not, exit.
     if options.indirname is None:
         logger.error("No input directory name (exiting)")
