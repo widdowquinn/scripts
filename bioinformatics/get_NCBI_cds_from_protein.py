@@ -777,9 +777,10 @@ def extract_cds(resdict, elink_cachename, acc_cachename, gbfull_cachename,
             logger.error("No GenBank records in accession cache for %s" % acc)
             continue
         if len(acc) > 1:
-            logger.error("More than one GenBank record in accession " +
+            logger.warning("More than one GenBank record in accession " +
                          "cache for %s (%s)" % (qhead, acc) + " (exiting)")
-            sys.exit(1)
+            logger.warning("Using the first of several possible matcing " +
+                           "records")
         gbdata = gb_index[acc[0]]
         # We obtain the coding feature as a SeqFeature, and the coding sequence
         # as a Seq.  We need both because the feature can contain information
@@ -857,6 +858,9 @@ def test_coding(result, stockholm):
             cds = result['cds'][offset:].translate()
     else:
         cds = result['cds'].translate()
+    if cds[-1] == '*':
+        logger.warning("CDS ends in stop codon, removing this.")
+        cds = cds[:-1]
     # Do we need to account for Stockholm format
     if not stockholm:
         if str(cds) == str(result['aa']):
